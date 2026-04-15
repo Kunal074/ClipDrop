@@ -110,4 +110,59 @@ router.post('/logout', (req, res) => {
   return res.json({ success: true });
 });
 
+const { google } = require('googleapis');
+
+function getGoogleOAuthClient() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/google/callback`
+  );
+}
+
+// GET /api/auth/google/connect
+router.get('/google/connect', requireAuth, (req, res) => {
+  const oauth2Client = getGoogleOAuthClient();
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.profile'],
+    prompt: 'consent', // Force consent so we always get a refresh token
+    state: req.user.id, // Pass user ID in state to link account in callback
+  });
+  res.redirect(authUrl);
+});
+
+// GET /api/auth/google/callback
+router.get('/google/callback', async (req, res) => {
+  try {
+    const { code, state: userId } = req.query;
+    
+    if (!code || !userId) {
+      return res.status(400).send('Missing code or user ID');
+    }
+
+    const oauth2Client = getGoogleOAuthClient();
+    const { tokens } = await oauth2Client.getToken(code);
+    oauth2Client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
+    const { data: userInfo } = await oauth2.userinfo.get();
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleId: userInfo.id,
+        googleAccessToken: tokens.access_token,
+        ...(tokens.refresh_token && { googleRefreshToken: tokens.refresh_token }),
+        googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+      },
+    });
+
+    res.redirect('/?google_connected=true');
+  } catch (error) {
+    console.error('[auth/google/callback]', error);
+    res.status(500).redirect('/?error=google_auth_failed');
+  }
+});
+
 module.exports = router;

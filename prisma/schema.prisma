@@ -11,13 +11,17 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  clips     Clip[]
-  rooms     Room[]
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  email              String    @unique
+  password           String
+  googleId           String?   @unique
+  googleAccessToken  String?
+  googleRefreshToken String?
+  googleTokenExpiry  DateTime?
+  createdAt          DateTime  @default(now())
+  clips              Clip[]
+  rooms              Room[]
 }
 
 model Room {
