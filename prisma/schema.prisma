@@ -1,0 +1,62 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  clips     Clip[]
+  rooms     Room[]
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String?
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  clips     Clip[]
+  createdAt DateTime @default(now())
+}
+
+model Clip {
+  id          String    @id @default(uuid())
+  roomCode    String
+  room        Room      @relation(fields: [roomCode], references: [code], onDelete: Cascade)
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username    String    @default("Anonymous")
+  type        ClipType
+  content     String    @default("")
+  fileName    String    @default("")
+  fileSize    Int       @default(0)
+  fileKey     String    @default("")
+  mimeType    String    @default("")
+  pinned      Boolean   @default(false)
+  isLargeFile Boolean   @default(false)
+  expiresAt   DateTime?
+  editedAt    DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([roomCode])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum ClipType {
+  text
+  image
+  file
+  link
+}

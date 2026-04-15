@@ -1,0 +1,38 @@
+{
+  "name": "clipdrop",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node --env-file=.env.local server.js",
+    "build": "next build",
+    "start": "node --env-file=.env.local --env-file=.env server.js",
+    "lint": "eslint .",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1029.0",
+    "@aws-sdk/s3-request-presigner": "^3.1029.0",
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^0.475.0",
+    "next": "^16.2.3",
+    "node-cron": "^4.2.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.3",
+    "prisma": "^5.22.0"
+  }
+}
