@@ -33,9 +33,17 @@ router.get('/', optionalAuth, async (req, res) => {
   }
 });
 
-// GET /api/clips/dashboard  → get current user's saved clips (no large-file expiry filter for normal)
+// GET /api/clips/dashboard  → get current user's saved clips
 router.get('/dashboard', requireAuth, async (req, res) => {
   try {
+    const soloRoomCode = `SOLO_${req.user.id}`;
+    let soloRoom = await prisma.room.findUnique({ where: { code: soloRoomCode } });
+    if (!soloRoom) {
+      soloRoom = await prisma.room.create({
+        data: { code: soloRoomCode, name: 'Personal Workspace', ownerId: req.user.id }
+      });
+    }
+
     const clips = await prisma.clip.findMany({
       where: {
         userId: req.user.id,
@@ -47,7 +55,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
     });
 
-    return res.json({ clips });
+    return res.json({ clips, soloRoomCode });
   } catch (err) {
     console.error('[clips/dashboard GET]', err);
     return res.status(500).json({ error: 'Server error' });
