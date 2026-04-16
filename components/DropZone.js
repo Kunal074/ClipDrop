@@ -8,6 +8,7 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [requireGoogle, setRequireGoogle] = useState(false);
   const fileInputRef = useRef(null);
 
   const uploadFile = useCallback(async (file) => {
@@ -17,6 +18,7 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
     }
 
     setError('');
+    setRequireGoogle(false);
     setUploading(true);
     setProgress(0);
 
@@ -37,13 +39,18 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
 
       if (!presignRes.ok) {
         const err = await presignRes.json();
+        if (err.requireGoogleAuth) {
+           setRequireGoogle(true);
+           setUploading(false);
+           return;
+        }
         throw new Error(err.error || 'Failed to get upload URL');
       }
 
-      const { presignedUrl, key, publicUrl } = await presignRes.json();
+      const { presignedUrl, isGoogleDrive } = await presignRes.json();
 
-      // Step 2: Upload directly to R2 with progress tracking
-      await new Promise((resolve, reject) => {
+      // Step 2: Upload directly to Google Drive Session URL
+      const xhrResponseText = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', presignedUrl);
         xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -55,7 +62,7 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
         };
 
         xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
           else reject(new Error(`Upload failed: ${xhr.status}`));
         };
 
@@ -63,17 +70,46 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
         xhr.send(file);
       });
 
+      let finalPublicUrl = '';
+      let finalFileKey = '';
+      
+      // Step 3: Finalize Drive File
+      if (isGoogleDrive) {
+        let fileId = '';
+        try {
+          const resObj = JSON.parse(xhrResponseText);
+          fileId = resObj.id;
+        } catch (e) {
+          throw new Error('Failed to parse Drive response');
+        }
+
+        const finalizeRes = await fetch('/api/upload/finalize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ fileId })
+        });
+
+        if (!finalizeRes.ok) throw new Error('Failed to finalize file permissions');
+        const finalized = await finalizeRes.json();
+        finalPublicUrl = finalized.publicUrl;
+        finalFileKey = fileId; // Store drive ID as key for later deletion
+      }
+
       setProgress(100);
 
-      // Step 3: Notify parent
+      // Step 4: Notify parent
       const isImage = file.type.startsWith('image/');
       onUploadComplete({
         type: isImage ? 'image' : 'file',
-        content: publicUrl,
+        content: finalPublicUrl,
         fileName: file.name,
         fileSize: file.size,
-        fileKey: key,
+        fileKey: finalFileKey,
         mimeType: file.type || 'application/octet-stream',
+        isLargeFile: true, // Tag as large file so cron cleans up
       });
     } catch (err) {
       setError(err.message);
@@ -100,11 +136,11 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
 
   return (
     <div
-      className={`dropzone ${dragging ? 'dropzone--active' : ''} ${uploading ? 'dropzone--uploading' : ''}`}
+      className={`dropzone ${dragging ? 'dropzone--active' : ''} ${(uploading || requireGoogle) ? 'dropzone--uploading' : ''}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onClick={() => !uploading && fileInputRef.current?.click()}
+      onClick={() => !uploading && !requireGoogle && fileInputRef.current?.click()}
       role="button"
       tabIndex={0}
       id="dropzone"
@@ -118,7 +154,27 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
         id="file-input"
       />
 
-      {uploading ? (
+      {requireGoogle ? (
+        <div className="dropzone__google-connect" style={{ textAlign: 'center', padding: '1rem' }}>
+          <p className="dropzone__label" style={{ marginBottom: '1rem' }}>
+            Large files are stored securely in your personal Google Drive.
+          </p>
+          <a href="/api/auth/google/connect" style={{
+            display: 'inline-block',
+            padding: '10px 20px',
+            backgroundColor: '#fff',
+            color: '#000',
+            textDecoration: 'none',
+            borderRadius: '8px',
+            fontWeight: '600'
+          }}>
+            Connect Google Drive
+          </a>
+          <p className="dropzone__sublabel" style={{ marginTop: '1rem', cursor: 'pointer' }} onClick={() => setRequireGoogle(false)}>
+            Cancel
+          </p>
+        </div>
+      ) : uploading ? (
         <div className="dropzone__progress">
           <div className="progress-bar">
             <div className="progress-bar__fill" style={{ width: `${progress}%` }} />
@@ -131,7 +187,7 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
           <p className="dropzone__label">
             {dragging ? 'Drop to upload' : 'Drop a file or click to browse'}
           </p>
-          <p className="dropzone__sublabel">Up to 1 GB · Large files expire in 30 min</p>
+          <p className="dropzone__sublabel">Up to 1 GB · Stored in Google Drive</p>
         </>
       )}
 
