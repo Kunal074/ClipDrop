@@ -172,18 +172,31 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
           <p className="dropzone__label" style={{ marginBottom: '1rem' }}>
             Large files are stored securely in your personal Google Drive.
           </p>
-          <a href="/api/auth/google/connect" style={{
-            display: 'inline-block',
-            padding: '10px 20px',
-            backgroundColor: '#fff',
-            color: '#000',
-            textDecoration: 'none',
-            borderRadius: '8px',
-            fontWeight: '600'
-          }}>
+          <button 
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.location.href = "/api/auth/google/connect";
+            }} 
+            style={{
+              display: 'inline-block',
+              padding: '10px 20px',
+              backgroundColor: '#fff',
+              color: '#000',
+              border: 'none',
+              cursor: 'pointer',
+              borderRadius: '8px',
+              fontWeight: '600',
+              fontSize: '1rem'
+            }}
+          >
             Connect Google Drive
-          </a>
-          <p className="dropzone__sublabel" style={{ marginTop: '1rem', cursor: 'pointer' }} onClick={() => setRequireGoogle(false)}>
+          </button>
+          <p 
+            className="dropzone__sublabel" 
+            style={{ marginTop: '1rem', cursor: 'pointer' }} 
+            onClick={(e) => { e.stopPropagation(); setRequireGoogle(false); }}
+          >
             Cancel
           </p>
         </div>
