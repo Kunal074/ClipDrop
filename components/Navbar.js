@@ -14,9 +14,8 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link href="/" className="navbar-logo">
-        <span className="navbar-logo-icon">📋</span>
-        <span>ClipDrop</span>
+      <Link href="/" className="navbar-logo" style={{ display: 'flex', alignItems: 'center' }}>
+        <img src="/ClipDrop%20logo.svg" alt="ClipDrop Logo" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
       </Link>
 
       <div className="navbar-actions">
