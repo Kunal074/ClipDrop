@@ -122,6 +122,19 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragging(false);
+
+    // Prevent folder drops
+    if (e.dataTransfer.items && e.dataTransfer.items[0]) {
+      const item = e.dataTransfer.items[0];
+      if (item.webkitGetAsEntry) {
+        const entry = item.webkitGetAsEntry();
+        if (entry && entry.isDirectory) {
+          setError('Folders are not supported. Please zip the folder first or drop individual files.');
+          return;
+        }
+      }
+    }
+
     const file = e.dataTransfer.files[0];
     if (file) uploadFile(file);
   }, [uploadFile]);

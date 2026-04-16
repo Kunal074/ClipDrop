@@ -4,6 +4,9 @@ export const metadata = {
   title: 'ClipDrop — Universal Clipboard & File Sharing',
   description: 'Paste text, images, and files up to 1 GB across all your devices instantly. Auto-expires. No friction.',
   keywords: 'clipboard sync, file sharing, cross-device, real-time, drop room',
+  icons: {
+    icon: '/icon.svg',
+  },
 };
 
 export default function RootLayout({ children }) {
