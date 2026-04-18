@@ -61,21 +61,23 @@ router.post('/presign', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
         'X-Upload-Content-Length': fileSize.toString(),
-        'X-Upload-Content-Type': contentType
+        'X-Upload-Content-Type': contentType,
+        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       },
       body: JSON.stringify(metadata)
     });
 
     if (!driveRes.ok) {
-       console.error(await driveRes.text());
-       throw new Error('Failed to create Drive upload session');
+       const rawText = await driveRes.text();
+       console.error(rawText);
+       throw new Error(`Google API ${driveRes.status}: ${rawText}`);
     }
 
     const resumableUrl = driveRes.headers.get('Location');
     return res.json({ presignedUrl: resumableUrl, isGoogleDrive: true });
   } catch (err) {
     console.error('[upload/presign]', err);
-    return res.status(500).json({ error: 'Failed to generate upload URL' });
+    return res.status(500).json({ error: `Failed to generate upload URL: ${err.message}` });
   }
 });
 

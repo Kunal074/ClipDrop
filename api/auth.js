@@ -135,7 +135,12 @@ router.get('/google/connect', requireAuth, (req, res) => {
 // GET /api/auth/google/callback
 router.get('/google/callback', async (req, res) => {
   try {
-    const { code, state: userId } = req.query;
+    const { code, state: userId, error } = req.query;
+    
+    if (error) {
+      console.error('Google returned error:', error);
+      return res.redirect(`/?error=google_returned_error_${error}`);
+    }
     
     if (!code || !userId) {
       return res.status(400).send('Missing code or user ID');

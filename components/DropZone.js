@@ -63,10 +63,10 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) resolve(xhr.responseText);
-          else reject(new Error(`Upload failed: ${xhr.status}`));
+          else reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.statusText || 'Unknown error'}`));
         };
 
-        xhr.onerror = () => reject(new Error('Upload failed'));
+        xhr.onerror = () => reject(new Error('Upload failed (Network/CORS error)'));
         xhr.send(file);
       });
 
@@ -149,7 +149,7 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
 
   return (
     <div
-      className={`dropzone ${dragging ? 'dropzone--active' : ''} ${(uploading || requireGoogle) ? 'dropzone--uploading' : ''}`}
+      className={`dropzone ${dragging ? 'dropzone--active' : ''} ${uploading ? 'dropzone--uploading' : ''}`}
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}

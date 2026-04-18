@@ -58,20 +58,26 @@ function HomeContent() {
           </p>
 
           <div className="hero-actions">
-            <button
-              id="btn-create-room"
-              className="btn btn-primary btn-lg"
-              onClick={createRoom}
-              disabled={creating}
-            >
-              {creating ? <span className="spinner" /> : '✦'}
-              {creating ? 'Creating...' : 'Create a Drop Room'}
-            </button>
-            {!loading && !user && (
-              <Link href="/register" className="btn btn-secondary btn-lg" id="btn-hero-register">
-                Sign up free
+            {user ? (
+              <Link href="/dashboard" className="btn btn-primary btn-lg" id="btn-go-dashboard">
+                ✦ Go to Personal Workspace
+              </Link>
+            ) : (
+              <Link href="/register" className="btn btn-primary btn-lg" id="btn-get-started">
+                ✦ Start Syncing Free
               </Link>
             )}
+            
+            <button
+              id="btn-create-room"
+              className="btn btn-secondary btn-lg"
+              onClick={createRoom}
+              disabled={creating}
+              title="Create a 6-digit room to share with others"
+            >
+              {creating ? <span className="spinner" /> : '✦'}
+              {creating ? 'Creating Room...' : 'Share a Drop Room'}
+            </button>
           </div>
 
           <form className="room-quick" onSubmit={joinRoom} id="form-join-room">
