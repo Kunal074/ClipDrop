@@ -17,6 +17,9 @@ model User {
   googleId           String?   @unique
   googleRefreshToken String?
   googleTokenExpiry  DateTime?
+  emailVerified      Boolean   @default(false)
+  otp                String?
+  otpExpiry          DateTime?
   clips              Clip[]
   rooms              Room[]
 }

@@ -2,8 +2,14 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { signToken, requireAuth } = require('../lib/auth');
+const { sendOtpEmail } = require('../lib/mailer');
 
 const router = express.Router();
+
+// ── OTP helpers ───────────────────────────────────────────────
+function generateOtp() {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
+}
 
 // POST /api/auth/register
 router.post('/register', async (req, res) => {
@@ -25,15 +31,81 @@ router.post('/register', async (req, res) => {
     });
     if (existing) {
       const field = existing.email === email.toLowerCase() ? 'Email' : 'Username';
+      // If same email but unverified, allow resend
+      if (existing.email === email.toLowerCase() && !existing.emailVerified) {
+        const otp = generateOtp();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+        await prisma.user.update({
+          where: { id: existing.id },
+          data: { otp, otpExpiry },
+        });
+        await sendOtpEmail(existing.email, otp, existing.username);
+        return res.status(200).json({
+          requiresVerification: true,
+          email: existing.email,
+          message: 'A new OTP has been sent to your email.',
+        });
+      }
       return res.status(409).json({ error: `${field} already in use` });
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    const user = await prisma.user.create({
-      data: { username, email: email.toLowerCase(), password: hashed },
+    const otp = generateOtp();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
+    await prisma.user.create({
+      data: {
+        username,
+        email: email.toLowerCase(),
+        password: hashed,
+        emailVerified: false,
+        otp,
+        otpExpiry,
+      },
     });
 
-    const token = signToken({ id: user.id, username: user.username, email: user.email });
+    await sendOtpEmail(email.toLowerCase(), otp, username);
+
+    return res.status(201).json({
+      requiresVerification: true,
+      email: email.toLowerCase(),
+      message: 'Check your email for a 6-digit verification code.',
+    });
+  } catch (err) {
+    console.error('[auth/register]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/verify-otp
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ error: 'Email and OTP are required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+    if (user.emailVerified) {
+      return res.status(400).json({ error: 'Email already verified. Please log in.' });
+    }
+    if (!user.otp || user.otp !== otp) {
+      return res.status(400).json({ error: 'Invalid OTP. Please check your email.' });
+    }
+    if (!user.otpExpiry || new Date() > user.otpExpiry) {
+      return res.status(400).json({ error: 'OTP has expired. Please request a new one.' });
+    }
+
+    // Mark verified and clear OTP
+    const verified = await prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true, otp: null, otpExpiry: null },
+    });
+
+    const token = signToken({ id: verified.id, username: verified.username, email: verified.email });
 
     res.cookie('clipdrop_token', token, {
       httpOnly: true,
@@ -42,12 +114,35 @@ router.post('/register', async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(201).json({
+    return res.json({
       token,
-      user: { id: user.id, username: user.username, email: user.email },
+      user: { id: verified.id, username: verified.username, email: verified.email },
     });
   } catch (err) {
-    console.error('[auth/register]', err);
+    console.error('[auth/verify-otp]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/resend-otp
+router.post('/resend-otp', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) return res.status(404).json({ error: 'Account not found' });
+    if (user.emailVerified) return res.status(400).json({ error: 'Email already verified' });
+
+    const otp = generateOtp();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({ where: { id: user.id }, data: { otp, otpExpiry } });
+    await sendOtpEmail(user.email, otp, user.username);
+
+    return res.json({ message: 'A new OTP has been sent to your email.' });
+  } catch (err) {
+    console.error('[auth/resend-otp]', err);
     return res.status(500).json({ error: 'Server error' });
   }
 });
@@ -68,6 +163,15 @@ router.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Block unverified users
+    if (!user.emailVerified) {
+      return res.status(403).json({
+        error: 'Please verify your email before logging in.',
+        requiresVerification: true,
+        email: user.email,
+      });
     }
 
     const token = signToken({ id: user.id, username: user.username, email: user.email });
@@ -126,8 +230,8 @@ router.get('/google/connect', requireAuth, (req, res) => {
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.profile'],
-    prompt: 'consent', // Force consent so we always get a refresh token
-    state: req.user.id, // Pass user ID in state to link account in callback
+    prompt: 'consent',
+    state: req.user.id,
   });
   res.redirect(authUrl);
 });
@@ -136,12 +240,12 @@ router.get('/google/connect', requireAuth, (req, res) => {
 router.get('/google/callback', async (req, res) => {
   try {
     const { code, state: userId, error } = req.query;
-    
+
     if (error) {
       console.error('Google returned error:', error);
       return res.redirect(`/?error=google_returned_error_${error}`);
     }
-    
+
     if (!code || !userId) {
       return res.status(400).send('Missing code or user ID');
     }
