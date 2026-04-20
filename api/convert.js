@@ -15,36 +15,45 @@ const upload = multer({
   limits: { fileSize: 100 * 1024 * 1024 }, // 100MB
 });
 
-// ─── Helper: detect if LibreOffice is available ───
-function hasLibreOffice() {
-  try {
-    const cmd = process.platform === 'win32'
-      ? 'where soffice'
-      : 'which libreoffice || which soffice';
-    execSync(cmd, { stdio: 'ignore' });
-    return true;
-  } catch {
-    return false;
+// ─── Helper: resolve LibreOffice binary path ───
+function getSofficePath() {
+  if (process.platform === 'win32') {
+    const winPath = 'C:\\Program Files\\LibreOffice\\program\\soffice.exe';
+    if (fs.existsSync(winPath)) return `"${winPath}"`;
+    try { execSync('where soffice', { stdio: 'ignore' }); return 'soffice'; } catch {}
+    return null;
   }
+  // Linux (Docker / Railway / Render / VPS)
+  const linuxPaths = ['/usr/bin/libreoffice', '/usr/bin/soffice', '/usr/local/bin/soffice'];
+  for (const p of linuxPaths) {
+    if (fs.existsSync(p)) return p;
+  }
+  try { execSync('which libreoffice', { stdio: 'ignore' }); return 'libreoffice'; } catch {}
+  try { execSync('which soffice', { stdio: 'ignore' }); return 'soffice'; } catch {}
+  return null;
+}
+
+function hasLibreOffice() {
+  return getSofficePath() !== null;
 }
 
 // ─── Helper: convert Office docs using LibreOffice ───
 async function convertWithLibreOffice(buffer, inputExt) {
   const os = require('os');
+  const sofficePath = getSofficePath();
+  if (!sofficePath) throw new Error('LibreOffice not found');
+
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'clipdrop-'));
   const inputFile = path.join(tmpDir, `input.${inputExt}`);
   const outputFile = path.join(tmpDir, 'input.pdf');
 
   fs.writeFileSync(inputFile, buffer);
 
-  const soffice = process.platform === 'win32' ? 'soffice' : 'libreoffice';
-  execSync(`"${soffice}" --headless --convert-to pdf --outdir "${tmpDir}" "${inputFile}"`, {
+  execSync(`${sofficePath} --headless --convert-to pdf --outdir "${tmpDir}" "${inputFile}"`, {
     timeout: 60000,
   });
 
   const pdfBuffer = fs.readFileSync(outputFile);
-
-  // Cleanup
   fs.rmSync(tmpDir, { recursive: true, force: true });
   return pdfBuffer;
 }
