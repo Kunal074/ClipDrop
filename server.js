@@ -16,6 +16,7 @@ const authRouter = require('./api/auth');
 const clipsRouter = require('./api/clips');
 const roomsRouter = require('./api/rooms');
 const uploadRouter = require('./api/upload');
+const convertRouter = require('./api/convert');
 
 nextApp.prepare().then(() => {
   const expressApp = express();
@@ -32,6 +33,7 @@ nextApp.prepare().then(() => {
   expressApp.use('/api/clips', clipsRouter);
   expressApp.use('/api/rooms', roomsRouter);
   expressApp.use('/api/upload', uploadRouter);
+  expressApp.use('/api/convert', convertRouter);
 
   // All other requests go to Next.js
   expressApp.all('*', (req, res) => {

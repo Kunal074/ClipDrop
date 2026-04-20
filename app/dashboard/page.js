@@ -83,6 +83,9 @@ function DashboardContent() {
     return () => socket.disconnect();
   }, [soloRoomCode, username]); // stable: soloRoomCode is a string, username is a string
 
+  // ─── Stable ref to sendClip so paste handler can call it without re-registering ───
+  const sendClipRef = useRef(null);
+
   // ─── Paste handler ───
   useEffect(() => {
     const handlePaste = (e) => {
@@ -90,16 +93,31 @@ function DashboardContent() {
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           const file = item.getAsFile();
-          if (file) { dropZoneRef.current?.uploadFile(file); return; }
+          if (!file) continue;
+
+          // Convert pasted image to base64 data URL — displays instantly, no Drive needed
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            await sendClipRef.current?.({
+              type: 'image',
+              content: ev.target.result,  // base64 data URL
+              fileName: `screenshot_${Date.now()}.png`,
+              fileSize: file.size,
+              mimeType: file.type,
+              isLargeFile: false,
+            });
+          };
+          reader.readAsDataURL(file);
+          return;
         }
-        if (item.kind === 'file') return; // non-image file, ignore
+        if (item.kind === 'file') return; // non-image file drop — ignore
       }
       const text = e.clipboardData?.getData('text');
       if (text?.trim()) setTextInput(text.trim());
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, []); // run once — only uses refs and setState setters which are stable
+  }, []); // stable: only uses refs
 
   // ─── Send clip ───
   const sendClip = useCallback(async (clipData) => {
@@ -128,7 +146,9 @@ function DashboardContent() {
     } finally {
       setSending(false);
     }
-  }, [toast]); // toast is stable per render-cycle; only changes on provider re-mount
+  }, [toast]);
+  // Keep ref in sync so paste handler always calls the latest sendClip
+  sendClipRef.current = sendClip;
 
   const sendText = async (e) => {
     e.preventDefault();

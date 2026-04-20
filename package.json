@@ -23,10 +23,13 @@
     "googleapis": "^171.4.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.475.0",
+    "multer": "^2.1.1",
     "next": "^16.2.3",
     "node-cron": "^4.2.1",
+    "pdf-lib": "^1.17.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "sharp": "^0.34.5",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "uuid": "^11.1.0"

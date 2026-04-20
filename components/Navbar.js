@@ -26,6 +26,9 @@ export default function Navbar() {
                 <Link href="/dashboard" className="navbar-link" id="nav-dashboard">
                   Dashboard
                 </Link>
+                <Link href="/convert" className="navbar-link" id="nav-convert">
+                  ⚡ Convert
+                </Link>
                 <span className="navbar-user">@{user.username}</span>
                 <button onClick={handleLogout} className="btn btn-ghost btn-sm" id="nav-logout">
                   Logout
