@@ -26,6 +26,8 @@ function DashboardContent() {
 
   const socketRef = useRef(null);
   const feedRef = useRef(null);
+  const dropZoneRef = useRef(null);
+  const [imageUrlInput, setImageUrlInput] = useState('');
 
   const fetchClips = useCallback(async () => {
     const token = getToken();
@@ -87,6 +89,13 @@ function DashboardContent() {
     const handlePaste = async (e) => {
       const items = e.clipboardData?.items || [];
       for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            dropZoneRef.current?.uploadFile(file);
+            return;
+          }
+        }
         if (item.kind === 'file') {
           toast.error("Please drag and drop files instead of pasting them.");
           return;
@@ -143,6 +152,14 @@ function DashboardContent() {
 
   const handleFileUpload = async (uploadResult) => {
     await sendClip(uploadResult);
+  };
+
+  const handleImageUrlSubmit = async (e) => {
+    e.preventDefault();
+    if (!imageUrlInput.trim()) return;
+    await sendClip({ type: 'image', content: imageUrlInput.trim() });
+    setImageUrlInput('');
+    toast.success('Image added from URL');
   };
 
   const handleDelete = async (id) => {
@@ -268,12 +285,32 @@ function DashboardContent() {
             </form>
           </div>
 
-          <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Drop File (Up to 1 GB)</p>
+          <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Drop File or Paste Image</p>
           <DropZone
+            ref={dropZoneRef}
             onUploadComplete={handleFileUpload}
             roomCode={soloRoomCode}
             token={getToken()}
           />
+
+          <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Add Image via URL</p>
+          <form onSubmit={handleImageUrlSubmit} className="paste-area">
+            <input
+              type="url"
+              className="form-input"
+              placeholder="https://example.com/image.png"
+              value={imageUrlInput}
+              onChange={e => setImageUrlInput(e.target.value)}
+              style={{ marginBottom: 10 }}
+            />
+            <button
+              type="submit"
+              className="btn btn-secondary btn-full"
+              disabled={sending || !imageUrlInput.trim()}
+            >
+              Add Image
+            </button>
+          </form>
         </aside>
 
         <main className="room-feed" ref={feedRef}>

@@ -3,6 +3,7 @@ const { v4: uuidv4 } = require('uuid');
 const prisma = require('../lib/prisma');
 const { requireAuth, optionalAuth } = require('../lib/auth');
 const { deleteFromR2 } = require('../lib/storage');
+const { deleteDriveFile } = require('../lib/googleDrive');
 
 const router = express.Router();
 
@@ -135,8 +136,13 @@ router.delete('/:id', requireAuth, async (req, res) => {
     if (!clip) return res.status(404).json({ error: 'Clip not found' });
     if (clip.userId !== req.user.id) return res.status(403).json({ error: 'Not your clip' });
 
-    // Delete from R2 if it's a file
+    // Delete from storage (R2 or Google Drive)
     if (clip.fileKey) {
+      if (clip.userId) {
+        // Try deleting from Google Drive
+        await deleteDriveFile(clip.userId, clip.fileKey);
+      }
+      // Also try R2 for backwards compatibility or if it's not a Drive file
       await deleteFromR2(clip.fileKey).catch((e) =>
         console.warn('[clips DELETE] R2 delete failed:', e.message)
       );

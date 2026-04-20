@@ -1,9 +1,9 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 
 const MAX_SIZE = 1024 * 1024 * 1024; // 1 GB
 
-export default function DropZone({ onUploadComplete, roomCode, token }) {
+const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -119,6 +119,10 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
     }
   }, [onUploadComplete, token]);
 
+  useImperativeHandle(ref, () => ({
+    uploadFile
+  }));
+
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setDragging(false);
@@ -220,4 +224,6 @@ export default function DropZone({ onUploadComplete, roomCode, token }) {
       {error && <p className="dropzone__error">{error}</p>}
     </div>
   );
-}
+});
+
+export default DropZone;
