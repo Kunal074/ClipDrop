@@ -156,17 +156,16 @@ router.get('/google/callback', async (req, res) => {
     await prisma.user.update({
       where: { id: userId },
       data: {
-        googleId: userInfo.id,
         googleAccessToken: tokens.access_token,
         ...(tokens.refresh_token && { googleRefreshToken: tokens.refresh_token }),
         googleTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
       },
     });
 
-    res.redirect('/?google_connected=true');
+    res.redirect('/dashboard?google_connected=true');
   } catch (error) {
     console.error('[auth/google/callback]', error);
-    res.status(500).redirect('/?error=google_auth_failed');
+    return res.redirect('/dashboard?error=google_auth_failed');
   }
 });
 

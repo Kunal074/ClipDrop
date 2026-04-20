@@ -16,22 +16,30 @@ function getGoogleOAuthClient() {
 }
 
 async function getValidAccessToken(user) {
-  let accessToken = user.googleAccessToken;
-  if (user.googleTokenExpiry && new Date() > user.googleTokenExpiry && user.googleRefreshToken) {
-    const oauth2Client = getGoogleOAuthClient();
-    oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
-    const { credentials } = await oauth2Client.refreshAccessToken();
-    accessToken = credentials.access_token;
-    
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        googleAccessToken: credentials.access_token,
-        googleTokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
-      }
-    });
+  // If we have a refresh token and the access token is expired (or expiry unknown), refresh it
+  const isExpired = !user.googleTokenExpiry || new Date() > new Date(user.googleTokenExpiry.getTime ? user.googleTokenExpiry.getTime() - 60000 : user.googleTokenExpiry - 60000);
+  
+  if (user.googleRefreshToken && isExpired) {
+    try {
+      const oauth2Client = getGoogleOAuthClient();
+      oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
+      const { credentials } = await oauth2Client.refreshAccessToken();
+      
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          googleAccessToken: credentials.access_token,
+          googleTokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : null,
+        }
+      });
+      
+      return credentials.access_token;
+    } catch (refreshErr) {
+      console.error('[getValidAccessToken] Token refresh failed:', refreshErr.message);
+      // Fall back to stored token
+    }
   }
-  return accessToken;
+  return user.googleAccessToken;
 }
 
 // POST /api/upload/presign  → get a Google Drive Resumable upload URL
@@ -103,7 +111,9 @@ router.post('/finalize', requireAuth, async (req, res) => {
     });
     
     const fileData = await getFileRes.json();
-    return res.json({ publicUrl: fileData.webViewLink, downloadUrl: fileData.webContentLink });
+    // Use uc?export=view URL for direct embedding in <img> tags
+    const embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+    return res.json({ publicUrl: embedUrl, downloadUrl: fileData.webContentLink, viewUrl: fileData.webViewLink });
   } catch (err) {
     console.error('[upload/finalize]', err);
     return res.status(500).json({ error: 'Failed to finalize Drive file' });

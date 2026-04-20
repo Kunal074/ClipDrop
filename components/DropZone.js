@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from '
 
 const MAX_SIZE = 1024 * 1024 * 1024; // 1 GB
 
-const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
+const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -23,6 +23,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
     setProgress(0);
 
     try {
+      const token = getToken ? getToken() : null;
       // Step 1: Get presigned URL
       const presignRes = await fetch('/api/upload/presign', {
         method: 'POST',
@@ -38,13 +39,16 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
       });
 
       if (!presignRes.ok) {
-        const err = await presignRes.json();
+        const rawText = await presignRes.text();
+        console.error('[DropZone] Presign failed:', presignRes.status, rawText);
+        let err;
+        try { err = JSON.parse(rawText); } catch { err = { error: rawText }; }
         if (err.requireGoogleAuth) {
            setRequireGoogle(true);
            setUploading(false);
            return;
         }
-        throw new Error(err.error || 'Failed to get upload URL');
+        throw new Error(`[${presignRes.status}] ${err.error || rawText}`);
       }
 
       const { presignedUrl, isGoogleDrive } = await presignRes.json();
@@ -92,7 +96,11 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
           body: JSON.stringify({ fileId })
         });
 
-        if (!finalizeRes.ok) throw new Error('Failed to finalize file permissions');
+        if (!finalizeRes.ok) {
+          const finalizeText = await finalizeRes.text();
+          console.error('[DropZone] Finalize failed:', finalizeRes.status, finalizeText);
+          throw new Error(`Finalize [${finalizeRes.status}]: ${finalizeText}`);
+        }
         const finalized = await finalizeRes.json();
         finalPublicUrl = finalized.publicUrl;
         finalFileKey = fileId; // Store drive ID as key for later deletion
@@ -109,7 +117,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
         fileSize: file.size,
         fileKey: finalFileKey,
         mimeType: file.type || 'application/octet-stream',
-        isLargeFile: true, // Tag as large file so cron cleans up
+        isLargeFile: true,
       });
     } catch (err) {
       setError(err.message);
@@ -117,7 +125,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
       setUploading(false);
       setTimeout(() => setProgress(0), 1500);
     }
-  }, [onUploadComplete, token]);
+  }, [onUploadComplete, getToken]);
 
   useImperativeHandle(ref, () => ({
     uploadFile
@@ -180,7 +188,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              window.location.href = "/api/auth/google/connect";
+              window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(localStorage.getItem('clipdrop_token') || '')}`;
             }} 
             style={{
               display: 'inline-block',
@@ -221,7 +229,21 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, token }, ref) => {
         </>
       )}
 
-      {error && <p className="dropzone__error">{error}</p>}
+      {error && (
+        <div style={{
+          marginTop: '0.75rem',
+          padding: '0.75rem',
+          background: 'rgba(239,68,68,0.15)',
+          border: '1px solid rgba(239,68,68,0.5)',
+          borderRadius: '8px',
+          fontSize: '0.78rem',
+          color: '#ff6b6b',
+          wordBreak: 'break-all',
+          whiteSpace: 'pre-wrap',
+        }}>
+          ⚠️ {error}
+        </div>
+      )}
     </div>
   );
 });

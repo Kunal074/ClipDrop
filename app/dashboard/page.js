@@ -9,115 +9,103 @@ import ClipCard from '@/components/ClipCard';
 import DropZone from '@/components/DropZone';
 
 function DashboardContent() {
-  const { user, loading, getToken } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const toast = useToast();
 
   const [clips, setClips] = useState([]);
   const [fetching, setFetching] = useState(true);
   const [soloRoomCode, setSoloRoomCode] = useState('');
-  
   const [textInput, setTextInput] = useState('');
   const [sending, setSending] = useState(false);
-
-  // Filters & Search
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [imageUrlInput, setImageUrlInput] = useState('');
 
   const socketRef = useRef(null);
   const feedRef = useRef(null);
   const dropZoneRef = useRef(null);
-  const [imageUrlInput, setImageUrlInput] = useState('');
+  // Stable ref to soloRoomCode so callbacks don't need it as a dep
+  const soloRoomCodeRef = useRef('');
 
-  const fetchClips = useCallback(async () => {
-    const token = getToken();
-    if (!token) return;
-    try {
-      const res = await fetch('/api/clips/dashboard', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setClips(data.clips || []);
-      setSoloRoomCode(data.soloRoomCode || `SOLO_${user?.id}`);
-    } catch (err) {
-      toast.error('Failed to load clips');
-    } finally {
-      setFetching(false);
+  const userId = user?.id;
+  const username = user?.username;
+
+  // ─── Show toast if redirected back after Google Drive connect ───
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('google_connected') === 'true') {
+      toast.success('✅ Google Drive connected! You can now upload large files.');
+      window.history.replaceState({}, '', '/dashboard');
     }
-  }, [getToken, toast, user]);
+  }, []); // run once on mount
 
+  // ─── Auth guard & initial clip fetch ───
   useEffect(() => {
-    if (!loading && !user) { router.push('/login'); return; }
-    if (!loading && user) fetchClips();
-  }, [loading, user, router, fetchClips]);
+    if (loading) return;
+    if (!userId) { router.push('/login'); return; }
 
-  // Socket
+    const token = localStorage.getItem('clipdrop_token');
+    if (!token) return;
+
+    setFetching(true);
+    fetch('/api/clips/dashboard', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        setClips(data.clips || []);
+        const code = data.soloRoomCode || `SOLO_${userId}`;
+        setSoloRoomCode(code);
+        soloRoomCodeRef.current = code;
+      })
+      .catch(() => {})
+      .finally(() => setFetching(false));
+  }, [loading, userId, router]); // stable: all primitives
+
+  // ─── Socket connection ───
   useEffect(() => {
-    if (!soloRoomCode || fetching) return;
+    if (!soloRoomCode) return;
 
     const socket = io(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000', {
       transports: ['websocket'],
     });
-
     socketRef.current = socket;
-    
-    socket.on('connect', () => {
-      socket.emit('join-room', { roomCode: soloRoomCode, username: user?.username });
-    });
 
+    socket.on('connect', () => {
+      socket.emit('join-room', { roomCode: soloRoomCode, username });
+    });
     socket.on('clip-received', (clip) => {
       setClips(prev => [clip, ...prev]);
-      scrollFeed();
+      setTimeout(() => { if (feedRef.current) feedRef.current.scrollTop = 0; }, 50);
     });
+    socket.on('clip-deleted', ({ clipId }) => setClips(prev => prev.filter(c => c.id !== clipId)));
+    socket.on('clip-edited', ({ clip }) => setClips(prev => prev.map(c => c.id === clip.id ? clip : c)));
 
-    socket.on('clip-deleted', ({ clipId }) => {
-      setClips(prev => prev.filter(c => c.id !== clipId));
-    });
+    return () => socket.disconnect();
+  }, [soloRoomCode, username]); // stable: soloRoomCode is a string, username is a string
 
-    socket.on('clip-edited', ({ clip }) => {
-      setClips(prev => prev.map(c => c.id === clip.id ? clip : c));
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [soloRoomCode, fetching, user]);
-
-  // Paste handler
+  // ─── Paste handler ───
   useEffect(() => {
-    const handlePaste = async (e) => {
+    const handlePaste = (e) => {
       const items = e.clipboardData?.items || [];
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           const file = item.getAsFile();
-          if (file) {
-            dropZoneRef.current?.uploadFile(file);
-            return;
-          }
+          if (file) { dropZoneRef.current?.uploadFile(file); return; }
         }
-        if (item.kind === 'file') {
-          toast.error("Please drag and drop files instead of pasting them.");
-          return;
-        }
+        if (item.kind === 'file') return; // non-image file, ignore
       }
       const text = e.clipboardData?.getData('text');
-      if (text?.trim()) {
-        setTextInput(text.trim());
-      }
+      if (text?.trim()) setTextInput(text.trim());
     };
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
-  }, [toast]);
+  }, []); // run once — only uses refs and setState setters which are stable
 
-  const scrollFeed = () => {
-    setTimeout(() => {
-      if (feedRef.current) feedRef.current.scrollTop = 0;
-    }, 50);
-  };
-
+  // ─── Send clip ───
   const sendClip = useCallback(async (clipData) => {
-    const token = getToken();
+    const token = localStorage.getItem('clipdrop_token');
+    const roomCode = soloRoomCodeRef.current;
+    if (!roomCode) return;
     setSending(true);
     try {
       const res = await fetch('/api/clips', {
@@ -126,21 +114,21 @@ function DashboardContent() {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ roomCode: soloRoomCode, ...clipData }),
+        body: JSON.stringify({ roomCode, ...clipData }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
       setClips(prev => [data.clip, ...prev]);
-      socketRef.current?.emit('new-clip', { ...data.clip, roomCode: soloRoomCode });
-      scrollFeed();
+      socketRef.current?.emit('new-clip', { ...data.clip, roomCode });
+      setTimeout(() => { if (feedRef.current) feedRef.current.scrollTop = 0; }, 50);
       return data.clip;
     } catch (err) {
       toast.error(err.message);
     } finally {
       setSending(false);
     }
-  }, [soloRoomCode, getToken, toast]);
+  }, [toast]); // toast is stable per render-cycle; only changes on provider re-mount
 
   const sendText = async (e) => {
     e.preventDefault();
@@ -150,9 +138,7 @@ function DashboardContent() {
     setTextInput('');
   };
 
-  const handleFileUpload = async (uploadResult) => {
-    await sendClip(uploadResult);
-  };
+  const handleFileUpload = useCallback((uploadResult) => sendClip(uploadResult), [sendClip]);
 
   const handleImageUrlSubmit = async (e) => {
     e.preventDefault();
@@ -163,7 +149,8 @@ function DashboardContent() {
   };
 
   const handleDelete = async (id) => {
-    const token = getToken();
+    const token = localStorage.getItem('clipdrop_token');
+    const roomCode = soloRoomCodeRef.current;
     try {
       const res = await fetch(`/api/clips/${id}`, {
         method: 'DELETE',
@@ -171,7 +158,7 @@ function DashboardContent() {
       });
       if (!res.ok) throw new Error((await res.json()).error);
       setClips(prev => prev.filter(c => c.id !== id));
-      socketRef.current?.emit('delete-clip', { clipId: id, roomCode: soloRoomCode });
+      socketRef.current?.emit('delete-clip', { clipId: id, roomCode });
       toast.success('Clip deleted');
     } catch (err) {
       toast.error(err.message);
@@ -179,7 +166,8 @@ function DashboardContent() {
   };
 
   const handleEdit = async (id, content) => {
-    const token = getToken();
+    const token = localStorage.getItem('clipdrop_token');
+    const roomCode = soloRoomCodeRef.current;
     try {
       const res = await fetch(`/api/clips/${id}`, {
         method: 'PUT',
@@ -189,7 +177,7 @@ function DashboardContent() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setClips(prev => prev.map(c => c.id === id ? data.clip : c));
-      socketRef.current?.emit('clip-updated', { clip: data.clip, roomCode: soloRoomCode });
+      socketRef.current?.emit('clip-updated', { clip: data.clip, roomCode });
       toast.success('Updated');
     } catch (err) {
       toast.error(err.message);
@@ -197,7 +185,7 @@ function DashboardContent() {
   };
 
   const handlePin = async (id) => {
-    const token = getToken();
+    const token = localStorage.getItem('clipdrop_token');
     try {
       const res = await fetch(`/api/clips/${id}/pin`, {
         method: 'PATCH',
@@ -211,10 +199,13 @@ function DashboardContent() {
     }
   };
 
+  const getToken = () => localStorage.getItem('clipdrop_token');
+
   const FILTERS = ['all', 'text', 'image', 'file', 'link'];
   const filtered = clips.filter(c => {
     const matchFilter = filter === 'all' || c.type === filter;
-    const matchSearch = !search || c.content?.toLowerCase().includes(search.toLowerCase()) ||
+    const matchSearch = !search ||
+      c.content?.toLowerCase().includes(search.toLowerCase()) ||
       c.fileName?.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
@@ -237,7 +228,7 @@ function DashboardContent() {
       <div className="room-header">
         <div className="room-code-display">
           <div className="room-code-label">Personal Workspace</div>
-          <div className="room-code-value">@{user?.username}</div>
+          <div className="room-code-value">@{username}</div>
         </div>
 
         <div className="room-status" style={{ gap: '1rem', display: 'flex', alignItems: 'center' }}>
@@ -290,7 +281,7 @@ function DashboardContent() {
             ref={dropZoneRef}
             onUploadComplete={handleFileUpload}
             roomCode={soloRoomCode}
-            token={getToken()}
+            getToken={getToken}
           />
 
           <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Add Image via URL</p>

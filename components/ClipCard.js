@@ -96,7 +96,24 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, showRoom = fal
           />
         ) : clip.type === 'image' && clip.content ? (
           <div className="clip-image-wrap">
-            <img src={clip.content} alt={clip.fileName || 'Image'} className="clip-image" />
+            <img
+              src={clip.content}
+              alt={clip.fileName || 'Image'}
+              className="clip-image"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
+            <a
+              href={clip.content}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost btn-sm"
+              style={{ display: 'none', marginTop: '0.5rem' }}
+            >
+              🔗 View Image
+            </a>
           </div>
         ) : clip.type === 'file' ? (
           <div className="clip-file">
