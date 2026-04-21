@@ -86,6 +86,13 @@ router.post('/presign', requireAuth, async (req, res) => {
          });
        }
        
+       if (driveRes.status === 401) {
+         return res.status(401).json({
+           error: 'Your Google session expired or the connection was revoked. Please reconnect your account.',
+           requireGoogleAuth: true
+         });
+       }
+       
        throw new Error(`Google API ${driveRes.status}: ${rawText}`);
     }
 
