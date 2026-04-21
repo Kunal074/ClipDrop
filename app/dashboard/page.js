@@ -104,6 +104,13 @@ function DashboardContent() {
               body: formData,
               credentials: 'include',
             });
+
+            if (res.status === 429) {
+              const data = await res.json();
+              toast.error(data.message || 'Image limit reached. Delete an image first.');
+              return;
+            }
+
             if (!res.ok) throw new Error('Upload failed');
             const { url, key } = await res.json();
 
@@ -118,20 +125,9 @@ function DashboardContent() {
             });
           } catch (err) {
             console.error('[paste image upload]', err);
-            // Fallback: still use base64 if R2 fails
-            const reader = new FileReader();
-            reader.onload = async (ev) => {
-              await sendClipRef.current?.({
-                type: 'image',
-                content: ev.target.result,
-                fileName: `screenshot_${Date.now()}.png`,
-                fileSize: file.size,
-                mimeType: file.type,
-                isLargeFile: false,
-              });
-            };
-            reader.readAsDataURL(file);
+            toast.error('Image upload failed. Try again.');
           }
+
           return;
         }
         if (item.kind === 'file') return;

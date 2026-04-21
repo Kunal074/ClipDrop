@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node --env-file=.env.local server.js",
     "build": "next build",
-    "start": "node --env-file=.env.local --env-file=.env server.js",
+    "start": "node server.js",
     "lint": "eslint .",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
