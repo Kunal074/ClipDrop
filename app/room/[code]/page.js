@@ -168,13 +168,13 @@ function RoomContent() {
   };
 
   // ─── Edit ───────────────────────────────
-  const handleEdit = async (id, content) => {
+  const handleEdit = async (id, updates) => {
     const token = getToken();
     try {
       const res = await fetch(`/api/clips/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(updates),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);

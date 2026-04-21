@@ -67,7 +67,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 // POST /api/clips  → create a clip
 router.post('/', optionalAuth, async (req, res) => {
   try {
-    const { roomCode, type, content, fileName, fileSize, fileKey, mimeType } = req.body;
+    const { roomCode, type, content, comment, fileName, fileSize, fileKey, mimeType } = req.body;
 
     if (!roomCode || !type) {
       return res.status(400).json({ error: 'roomCode and type are required' });
@@ -88,6 +88,7 @@ router.post('/', optionalAuth, async (req, res) => {
         username: req.user?.username || 'Anonymous',
         type,
         content: content || '',
+        comment: comment || null,
         fileName: fileName || '',
         fileSize: fileSize || 0,
         fileKey: fileKey || '',
@@ -108,18 +109,25 @@ router.post('/', optionalAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { content } = req.body;
+    const { content, comment } = req.body;
 
     const clip = await prisma.clip.findUnique({ where: { id } });
     if (!clip) return res.status(404).json({ error: 'Clip not found' });
     if (clip.userId !== req.user.id) return res.status(403).json({ error: 'Not your clip' });
-    if (!['text', 'link'].includes(clip.type)) {
-      return res.status(400).json({ error: 'Only text and link clips can be edited' });
+
+    // We used to only allow text/link edits, but now we allow editing comments on ALL clips!
+    // So we only update content if it's text/link, but we can always update comment.
+    const updateData = { editedAt: new Date() };
+    if (content !== undefined && ['text', 'link'].includes(clip.type)) {
+      updateData.content = content;
+    }
+    if (comment !== undefined) {
+      updateData.comment = comment;
     }
 
     const updated = await prisma.clip.update({
       where: { id },
-      data: { content, editedAt: new Date() },
+      data: updateData,
     });
 
     return res.json({ clip: updated });

@@ -41,6 +41,7 @@ model Clip {
   username    String    @default("Anonymous")
   type        ClipType
   content     String    @default("")
+  comment     String?
   fileName    String    @default("")
   fileSize    Int       @default(0)
   fileKey     String    @default("")

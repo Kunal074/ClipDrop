@@ -205,14 +205,14 @@ function DashboardContent() {
     }
   };
 
-  const handleEdit = async (id, content) => {
+  const handleEdit = async (id, updates) => {
     const token = localStorage.getItem('clipdrop_token');
     const roomCode = soloRoomCodeRef.current;
     try {
       const res = await fetch(`/api/clips/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(updates),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -246,7 +246,8 @@ function DashboardContent() {
     const matchFilter = filter === 'all' || c.type === filter;
     const matchSearch = !search ||
       c.content?.toLowerCase().includes(search.toLowerCase()) ||
-      c.fileName?.toLowerCase().includes(search.toLowerCase());
+      c.fileName?.toLowerCase().includes(search.toLowerCase()) ||
+      c.comment?.toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 

@@ -84,6 +84,7 @@ function ImageLightbox({ src, alt, onClose }) {
 export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, showRoom = false }) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(clip.content);
+  const [editComment, setEditComment] = useState(clip.comment || '');
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState(false);
@@ -135,9 +136,14 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   };
 
   const handleEdit = async () => {
-    if (!editing) { setEditing(true); return; }
+    if (!editing) { 
+      setEditing(true); 
+      setEditValue(clip.content);
+      setEditComment(clip.comment || '');
+      return; 
+    }
     setLoading(true);
-    await onEdit(clip.id, editValue);
+    await onEdit(clip.id, { content: editValue, comment: editComment });
     setEditing(false); setLoading(false);
   };
 
@@ -250,8 +256,8 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
               </button>
             )}
 
-            {['text', 'link'].includes(clip.type) && onEdit && (
-              <button onClick={handleEdit} className="icon-btn" title="Edit" id={`btn-edit-${clip.id}`} disabled={loading}>
+            {onEdit && (
+              <button onClick={handleEdit} className="icon-btn" title={editing ? "Save changes" : "Edit or add comment"} id={`btn-edit-${clip.id}`} disabled={loading}>
                 {editing ? '💾' : '✏️'}
               </button>
             )}
@@ -287,8 +293,21 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
         {/* Content */}
         <div className="clip-card__body">
           {editing ? (
-            <textarea className="clip-edit-input" value={editValue}
-              onChange={e => setEditValue(e.target.value)} rows={4} autoFocus />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {['text', 'link'].includes(clip.type) && (
+                <textarea className="clip-edit-input" value={editValue}
+                  onChange={e => setEditValue(e.target.value)} rows={4} autoFocus placeholder="Edit content..." />
+              )}
+              <input 
+                type="text" 
+                className="clip-edit-input" 
+                value={editComment} 
+                onChange={e => setEditComment(e.target.value)} 
+                placeholder="Add a comment or tag..." 
+                autoFocus={!['text', 'link'].includes(clip.type)}
+                style={{ padding: '0.5rem', height: 'auto' }}
+              />
+            </div>
           ) : clip.type === 'image' && clip.content ? (
             <div className="clip-image-wrap" onClick={() => setLightbox(true)} style={{ cursor: 'zoom-in' }} title="Click to full view">
               <img src={clip.content} alt={clip.fileName || 'Image'} className="clip-image"
@@ -318,6 +337,12 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
             <CodeBlock content={clip.content} />
           ) : (
             <p className="clip-content" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{clip.content || '—'}</p>
+          )}
+          
+          {!editing && clip.comment && (
+            <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.05)', borderRadius: '6px', fontSize: '0.85rem', color: 'var(--text-2)', borderLeft: '3px solid #00d4ff' }}>
+              💬 {clip.comment}
+            </div>
           )}
         </div>
 
