@@ -2,15 +2,13 @@
 import { useState } from 'react';
 import { PDFDocument, degrees } from 'pdf-lib';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function RotatePdfPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [rotation, setRotation] = useState(90);
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     setIsProcessing(true);
     try {

@@ -2,15 +2,13 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function SplitPdfPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [pageRange, setPageRange] = useState('');
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) {
       toast.error('Please select a PDF file.');
       return;

@@ -1,15 +1,13 @@
 'use client';
 import { useState } from 'react';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function SvgToImagePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [format, setFormat] = useState('image/png');
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     setIsProcessing(true);
     try {

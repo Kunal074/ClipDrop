@@ -1,14 +1,12 @@
 'use client';
 import { useState } from 'react';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function OfficeToPdfPage({ title, description, accept }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     setIsProcessing(true);
     try {

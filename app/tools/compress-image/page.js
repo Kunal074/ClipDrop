@@ -1,16 +1,14 @@
 'use client';
 import { useState } from 'react';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function CompressImagePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [quality, setQuality] = useState(0.6);
   const [format, setFormat] = useState('image/jpeg');
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     setIsProcessing(true);
     try {

@@ -2,15 +2,13 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function RemovePagesPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [pagesToRemove, setPagesToRemove] = useState('');
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     if (!pagesToRemove.trim()) {
       toast.error('Please enter the pages you want to remove (e.g., 1, 3, 5-7)');

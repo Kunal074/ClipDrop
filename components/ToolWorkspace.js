@@ -8,6 +8,7 @@ export function ToolWorkspaceContent({ title, description, accept, multiple = fa
   const [files, setFiles] = useState([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const toast = useToast();
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -124,7 +125,7 @@ export function ToolWorkspaceContent({ title, description, accept, multiple = fa
 
             <button
               className="btn btn-primary btn-full"
-              onClick={() => onProcess(multiple ? files : files[0])}
+              onClick={() => onProcess(multiple ? files : files[0], toast)}
               disabled={isProcessing || files.length === 0}
             >
               {isProcessing ? <><span className="spinner" /> Processing...</> : 'Start Processing'}

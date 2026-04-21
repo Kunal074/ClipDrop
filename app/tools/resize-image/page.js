@@ -1,16 +1,14 @@
 'use client';
 import { useState } from 'react';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function ResizeImagePage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
-  const toast = useToast();
 
-  const handleProcess = async (file) => {
+  const handleProcess = async (file, toast) => {
     if (!file) return;
     if (!width && !height) {
       toast.error('Please enter at least one dimension (width or height).');

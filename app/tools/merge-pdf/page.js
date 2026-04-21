@@ -2,14 +2,12 @@
 import { useState } from 'react';
 import { PDFDocument } from 'pdf-lib';
 import ToolWorkspace from '@/components/ToolWorkspace';
-import { useToast } from '@/components/Toast';
 
 export default function MergePdfPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [resultFile, setResultFile] = useState(null);
-  const toast = useToast();
 
-  const handleProcess = async (files) => {
+  const handleProcess = async (files, toast) => {
     if (!files || files.length < 2) {
       toast.error('Please select at least 2 PDF files to merge.');
       return;
