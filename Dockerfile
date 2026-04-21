@@ -29,6 +29,7 @@ RUN npm run build
 
 # Optimize Node memory for 512MB limit
 ENV NODE_OPTIONS="--max-old-space-size=400"
+ENV NODE_ENV="production"
 
 EXPOSE 3000
 
