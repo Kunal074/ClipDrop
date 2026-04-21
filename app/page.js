@@ -101,6 +101,7 @@ function HomeContent() {
             { icon: '⚡', title: 'Instant Paste', desc: 'Press Ctrl+V anywhere in a room. Text and images sync across devices in under 100ms via WebSocket.' },
             { icon: '📦', title: '1 GB File Drops', desc: 'Drop any file up to 1 GB. Uploaded directly to Cloudflare R2 — never touches our server.' },
             { icon: '⏱', title: '30‑Min Large File Expiry', desc: 'Files over 10 MB auto-delete after 30 minutes. Smaller clips and text are saved permanently.' },
+            { icon: '🔄', title: 'Free File Converter', desc: 'Convert documents, spreadsheets, and presentations to PDF instantly without leaving the app.' },
             { icon: '🔗', title: 'Drop Rooms', desc: 'Share a 6-character code. Any device that joins sees every clip in real-time.' },
             { icon: '💾', title: 'Persistent Dashboard', desc: 'All your clips saved to your account. Edit text, pin favourites, delete what you don&apos;t need.' },
             { icon: '🌍', title: 'No Install Needed', desc: '100% browser-based. Works on any device with a modern browser — phone, tablet, desktop.' },
