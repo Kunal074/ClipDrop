@@ -2,9 +2,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
+import { useTheme } from './ThemeProvider';
 
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
+  const { theme, toggle } = useTheme();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -19,6 +21,28 @@ export default function Navbar() {
       </Link>
 
       <div className="navbar-actions">
+        {/* Theme toggle — always visible */}
+        <button
+          onClick={toggle}
+          id="btn-theme-toggle"
+          title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            width: 34, height: 34,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1rem',
+            transition: 'all 0.2s',
+            color: 'var(--text-2)',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+
         {!loading && (
           <>
             {user ? (

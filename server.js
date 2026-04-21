@@ -118,37 +118,35 @@ nextApp.prepare().then(() => {
       const prisma = new PrismaClient();
       const { google } = require('googleapis');
 
+      // Find ALL expired clips (expiresAt is set and in the past, and not pinned)
       const expired = await prisma.clip.findMany({
-        where: { isLargeFile: true, expiresAt: { lt: new Date() } },
+        where: { expiresAt: { lt: new Date() }, pinned: false },
         include: { user: true }
       });
 
       for (const clip of expired) {
-        if (clip.fileKey && clip.user && clip.user.googleRefreshToken) {
+        // Delete Google Drive file if applicable
+        if (clip.fileKey && clip.user?.googleRefreshToken) {
           try {
             const oauth2Client = new google.auth.OAuth2(
               process.env.GOOGLE_CLIENT_ID,
               process.env.GOOGLE_CLIENT_SECRET
             );
             oauth2Client.setCredentials({ refresh_token: clip.user.googleRefreshToken });
-            
-            // Force refresh to get a valid access token right now
             const { credentials } = await oauth2Client.refreshAccessToken();
-            
             await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
               method: 'DELETE',
               headers: { Authorization: `Bearer ${credentials.access_token}` }
             });
-            console.log(`[cron] Deleted file ${clip.fileKey} from Google Drive`);
           } catch (driveErr) {
-            console.error(`[cron] Failed to delete ${clip.fileKey} from Drive:`, driveErr.message);
+            console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message);
           }
         }
         await prisma.clip.delete({ where: { id: clip.id } });
       }
 
       if (expired.length > 0) {
-        console.log(`[cron] Cleaned up ${expired.length} expired large-file clip(s)`);
+        console.log(`[cron] Cleaned up ${expired.length} expired clip(s)`);
       }
 
       await prisma.$disconnect();

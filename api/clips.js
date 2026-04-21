@@ -19,8 +19,8 @@ router.get('/', optionalAuth, async (req, res) => {
       where: {
         roomCode,
         OR: [
-          { isLargeFile: false },
-          { isLargeFile: true, expiresAt: { gt: new Date() } },
+          { expiresAt: null },                          // pinned/important clips
+          { expiresAt: { gt: new Date() } },            // not yet expired
         ],
       },
       orderBy: { createdAt: 'desc' },
@@ -49,8 +49,8 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       where: {
         userId: req.user.id,
         OR: [
-          { isLargeFile: false },
-          { isLargeFile: true, expiresAt: { gt: new Date() } },
+          { expiresAt: null },                          // pinned/important clips
+          { expiresAt: { gt: new Date() } },            // not yet expired
         ],
       },
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
@@ -77,7 +77,8 @@ router.post('/', optionalAuth, async (req, res) => {
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
     const isLargeFile = (fileSize || 0) > LARGE_FILE_THRESHOLD;
-    const expiresAt = isLargeFile ? new Date(Date.now() + 30 * 60 * 1000) : null;
+    // ALL clips expire in 30 minutes — pin to make Important (no expiry)
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     const clip = await prisma.clip.create({
       data: {
@@ -164,9 +165,14 @@ router.patch('/:id/pin', requireAuth, async (req, res) => {
     if (!clip) return res.status(404).json({ error: 'Clip not found' });
     if (clip.userId !== req.user.id) return res.status(403).json({ error: 'Not your clip' });
 
+    const newPinned = !clip.pinned;
     const updated = await prisma.clip.update({
       where: { id },
-      data: { pinned: !clip.pinned },
+      data: {
+        pinned: newPinned,
+        // Pinned = Important = no expiry. Unpinned = 30 min from now.
+        expiresAt: newPinned ? null : new Date(Date.now() + 30 * 60 * 1000),
+      },
     });
 
     return res.json({ clip: updated });

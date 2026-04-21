@@ -99,13 +99,26 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   const isCode = clip.type === 'text' && looksLikeCode(clip.content);
   const isLongText = clip.type === 'text' && (clip.content?.length || 0) > 100;
 
-  const timeLeft = clip.isLargeFile && clip.expiresAt
-    ? Math.max(0, Math.floor((new Date(clip.expiresAt) - Date.now()) / 1000))
-    : null;
+  // Live countdown for ALL clips (null expiresAt = Important/pinned = never expires)
+  const [timeLeft, setTimeLeft] = useState(() =>
+    clip.expiresAt ? Math.max(0, Math.floor((new Date(clip.expiresAt) - Date.now()) / 1000)) : null
+  );
+
+  useEffect(() => {
+    if (!clip.expiresAt || clip.pinned) return;
+    const interval = setInterval(() => {
+      const secs = Math.max(0, Math.floor((new Date(clip.expiresAt) - Date.now()) / 1000));
+      setTimeLeft(secs);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [clip.expiresAt, clip.pinned]);
 
   const formatTime = s => {
+    if (s === null) return null;
     if (s <= 0) return 'Expired';
-    return `${Math.floor(s / 60)}m ${s % 60}s`;
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}m ${sec}s`;
   };
 
   const copyToClipboard = async () => {
@@ -195,10 +208,10 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
           <div className="clip-card__meta">
             <span className={`badge ${typeBadgeClass}`}>{typeIcon} {clip.type}</span>
             {isCode && <span className="badge badge-blue" style={{ background: 'rgba(99,102,241,0.15)', color: '#818cf8' }}>{'</>'} code</span>}
-            {clip.pinned && <span className="badge badge-pin">📌 Pinned</span>}
-            {clip.isLargeFile && (
-              <span className={`badge ${timeLeft <= 0 ? 'badge-expired' : 'badge-expires'}`}>
-                ⏱ {timeLeft !== null ? formatTime(timeLeft) : '30m'}
+            {clip.pinned && <span className="badge badge-pin">⭐ Important</span>}
+            {!clip.pinned && clip.expiresAt && (
+              <span className={`badge ${timeLeft <= 0 ? 'badge-expired' : 'badge-expires'}`} title="Auto-deletes when expired">
+                ⏱ {timeLeft !== null ? (formatTime(timeLeft) || '—') : '30m'}
               </span>
             )}
           </div>
@@ -243,8 +256,14 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
               </button>
             )}
             {onPin && (
-              <button onClick={() => onPin(clip.id)} className="icon-btn" title={clip.pinned ? 'Unpin' : 'Pin'} id={`btn-pin-${clip.id}`}>
-                {clip.pinned ? '📌' : '🔖'}
+              <button
+                onClick={() => onPin(clip.id)}
+                className="icon-btn"
+                title={clip.pinned ? 'Remove Important (will expire in 30 min)' : 'Mark as Important (never expires)'}
+                id={`btn-pin-${clip.id}`}
+                style={{ color: clip.pinned ? '#f59e0b' : undefined }}
+              >
+                {clip.pinned ? '⭐' : '☆'}
               </button>
             )}
             {onDelete && (
