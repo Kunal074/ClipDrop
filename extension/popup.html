@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipDrop Quick Sender</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  
+  <!-- LOGIN VIEW -->
+  <div id="login-view" class="view hidden">
+    <div class="header">
+      <h2>✦ ClipDrop</h2>
+    </div>
+    <form id="login-form">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" required>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="login-btn">Login</button>
+      <div id="login-error" class="error-msg"></div>
+    </form>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div id="main-view" class="view hidden">
+    <div class="header">
+      <h2>✦ ClipDrop</h2>
+      <button id="logout-btn" class="btn-ghost" title="Logout">🚪</button>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" data-tab="personal">Personal</button>
+      <button class="tab" data-tab="room">Room</button>
+    </div>
+
+    <!-- TAB CONTENTS -->
+    
+    <!-- PERSONAL TAB -->
+    <div id="tab-personal" class="tab-content active">
+      <div class="form-group">
+        <textarea id="personal-input" rows="3" placeholder="Type or paste text/link here..."></textarea>
+        <input type="text" id="personal-comment" placeholder="Add comment (optional)" class="comment-input">
+      </div>
+      <button id="personal-send-btn" class="btn btn-primary">Send to Dashboard</button>
+      
+      <div class="history-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h3 style="margin-bottom: 0;">Recent Sends (Personal)</h3>
+          <button id="open-dashboard-btn" class="btn-ghost btn-sm" style="font-size: 0.75rem;">↗ Open Site</button>
+        </div>
+        <div id="personal-history" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- ROOM TAB -->
+    <div id="tab-room" class="tab-content">
+      <div class="room-selector">
+        <input type="text" id="room-code-input" placeholder="Room Code (e.g., QWERT)" style="text-transform: uppercase;">
+        <button id="room-join-btn" class="btn btn-secondary">Set Room</button>
+      </div>
+      
+      <div id="room-drop-area" class="hidden">
+        <div class="current-room-label">
+          Sending to room: <strong id="current-room-display"></strong>
+          <button id="room-change-btn" class="btn-ghost btn-sm">Change</button>
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <textarea id="room-input" rows="3" placeholder="Type or paste text/link here..."></textarea>
+          <input type="text" id="room-comment" placeholder="Add comment (optional)" class="comment-input">
+        </div>
+        <button id="room-send-btn" class="btn btn-primary">Send to Room</button>
+        
+        <div class="history-section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin-bottom: 0;">Recent Sends (Room)</h3>
+            <button id="open-room-btn" class="btn-ghost btn-sm" style="font-size: 0.75rem;">↗ Open Room</button>
+          </div>
+          <div id="room-history" class="history-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

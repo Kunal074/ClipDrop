@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "ClipDrop Quick Sender",
+  "version": "1.0",
+  "description": "Quickly send text and links to your ClipDrop Personal Dashboard or Drop Rooms.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "storage",
+    "activeTab"
+  ]
+}

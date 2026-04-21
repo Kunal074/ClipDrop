@@ -22,6 +22,7 @@ function DashboardContent() {
   const [imageComment, setImageComment] = useState('');
   const [fileComment, setFileComment] = useState('');
   const [sending, setSending] = useState(false);
+  const [creatingRoom, setCreatingRoom] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -255,6 +256,28 @@ function DashboardContent() {
     }
   };
 
+  const createRoom = async () => {
+    setCreatingRoom(true);
+    try {
+      const token = localStorage.getItem('clipdrop_token');
+      const res = await fetch('/api/rooms', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ name: 'Quick Share' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      router.push(`/room/${data.room.code}`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setCreatingRoom(false);
+    }
+  };
+
   const getToken = () => localStorage.getItem('clipdrop_token');
 
   const FILTERS = ['all', 'text', 'image', 'file', 'link'];
@@ -302,10 +325,12 @@ function DashboardContent() {
           </div>
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => router.push('/')}
+            onClick={createRoom}
+            disabled={creatingRoom}
             title="Create a temporary 6-digit room to share clips with others"
           >
-            ✦ Share a Drop Room
+            {creatingRoom ? <span className="spinner" style={{width: 14, height: 14, marginRight: 6}} /> : '✦ '}
+            {creatingRoom ? 'Creating...' : 'Share a Drop Room'}
           </button>
         </div>
       </div>
