@@ -308,10 +308,16 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
               </div>
               {clip.content && <a href={clip.content} download={clip.fileName} className="btn btn-ghost btn-sm">↓ Download</a>}
             </div>
+          ) : clip.type === 'link' ? (
+            <p className="clip-content">
+              <a href={clip.content} target="_blank" rel="noopener noreferrer" style={{ color: '#00d4ff', textDecoration: 'underline', wordBreak: 'break-all' }}>
+                {clip.content}
+              </a>
+            </p>
           ) : isCode ? (
             <CodeBlock content={clip.content} />
           ) : (
-            <p className="clip-content">{clip.content || '—'}</p>
+            <p className="clip-content" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{clip.content || '—'}</p>
           )}
         </div>
 

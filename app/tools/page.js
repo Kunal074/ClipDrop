@@ -26,13 +26,6 @@ export default function ToolsDashboard() {
       ],
     },
     {
-      name: 'Security',
-      tools: [
-        { name: 'Protect PDF', slug: 'protect-pdf', icon: '🔒', desc: 'Encrypt your PDF with a password' },
-        { name: 'Unlock PDF', slug: 'unlock-pdf', icon: '🔓', desc: 'Remove PDF password security' },
-      ],
-    },
-    {
       name: 'Convert To PDF',
       tools: [
         { name: 'Word to PDF', slug: 'word-to-pdf', icon: '📝', desc: 'Make DOC and DOCX files easy to read by converting them', keywords: 'doc to pdf docx to pdf office to pdf document to pdf' },
@@ -42,12 +35,7 @@ export default function ToolsDashboard() {
         { name: 'PNG to PDF', slug: 'png-to-pdf', icon: '🏞️', desc: 'Convert PNG images to PDF in seconds', keywords: 'image to pdf photo to pdf picture to pdf' },
       ],
     },
-    {
-      name: 'Convert From PDF',
-      tools: [
-        { name: 'PDF to JPG', slug: 'pdf-to-jpg', icon: '🖼️', desc: 'Extract images from your PDF or convert each page to a JPG', keywords: 'pdf to image pdf to photo pdf to jpeg' },
-      ],
-    },
+
     {
       name: 'Image Tools',
       tools: [
