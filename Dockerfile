@@ -27,6 +27,9 @@ COPY . .
 # Build Next.js
 RUN npm run build
 
+# Optimize Node memory for 512MB limit
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
 EXPOSE 3000
 
 CMD ["sh", "-c", "npx prisma db push && npm start"]

@@ -174,8 +174,8 @@ nextApp.prepare().then(() => {
   });
 
   const PORT = process.env.PORT || 3000;
-  httpServer.listen(PORT, () => {
-    console.log(`\n  ✦ ClipDrop server → http://localhost:${PORT}`);
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n  ✦ ClipDrop server → http://0.0.0.0:${PORT}`);
     console.log(`  ✦ Mode: ${dev ? 'development' : 'production'}\n`);
   });
 });
