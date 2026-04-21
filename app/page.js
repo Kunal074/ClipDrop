@@ -47,14 +47,14 @@ function HomeContent() {
       <main>
         {/* Hero */}
         <section className="hero">
-          <div className="hero-badge">✦ Cross-Device Clipboard · 1 GB Files · Real-time Sync</div>
+          <div className="hero-badge">✦ Cross-Device Clipboard · Unlimited Files · Real-time Sync</div>
           <h1>
             Your clipboard,{' '}
             <span className="gradient-text">everywhere</span>
           </h1>
           <p>
-            Paste text, images, and files up to 1&nbsp;GB — instantly accessible from any device.
-            Large files auto-delete in 30 minutes. Everything else is saved forever.
+            Paste text, images, and massive files — instantly accessible from any device. 
+            Connect your Google Drive for unlimited cloud file storage. Over 15+ free utility tools included!
           </p>
 
           <div className="hero-actions">
@@ -98,13 +98,13 @@ function HomeContent() {
         {/* Feature Grid */}
         <section className="features" aria-label="Features">
           {[
-            { icon: '⚡', title: 'Instant Paste', desc: 'Press Ctrl+V anywhere in a room. Text and images sync across devices in under 100ms via WebSocket.' },
-            { icon: '📦', title: '1 GB File Drops', desc: 'Drop any file up to 1 GB. Uploaded directly to Cloudflare R2 — never touches our server.' },
-            { icon: '⏱', title: '30‑Min Large File Expiry', desc: 'Files over 10 MB auto-delete after 30 minutes. Smaller clips and text are saved permanently.' },
-            { icon: '🔄', title: 'Free File Converter', desc: 'Convert documents, spreadsheets, and presentations to PDF instantly without leaving the app.' },
-            { icon: '🔗', title: 'Drop Rooms', desc: 'Share a 6-character code. Any device that joins sees every clip in real-time.' },
-            { icon: '💾', title: 'Persistent Dashboard', desc: 'All your clips saved to your account. Edit text, pin favourites, delete what you don&apos;t need.' },
-            { icon: '🌍', title: 'No Install Needed', desc: '100% browser-based. Works on any device with a modern browser — phone, tablet, desktop.' },
+            { icon: '⚡', title: 'Instant Sync', desc: 'Press Ctrl+V anywhere in a room. Text and images sync across devices in under 100ms via WebSocket.' },
+            { icon: '📦', title: 'Unlimited File Size', desc: 'Drop massive files. Uploaded directly to your personal Google Drive — never touches our server, zero limits.' },
+            { icon: '🛠️', title: 'PDF & Image Tools', desc: 'Merge, split, compress, or convert documents to PDF instantly right in your browser for free.' },
+            { icon: '🔗', title: 'Drop Rooms', desc: 'Share a 6-character code. Any device that joins sees every clip in real-time instantly.' },
+            { icon: '💾', title: 'Persistent Dashboard', desc: 'All your clips saved to your account. Edit text, pin favourites, delete what you don\'t need.' },
+            { icon: '🎨', title: 'Vector & Raster Edits', desc: 'Convert SVGs to PNGs, resize images, or even turn raster images into vector SVG files.' },
+            { icon: '🌍', title: 'Browser Native', desc: '100% web-based. Works on any device with a modern browser — phone, tablet, or desktop.' },
           ].map(f => (
             <div key={f.title} className="card feature-card">
               <div className="feature-icon">{f.icon}</div>
