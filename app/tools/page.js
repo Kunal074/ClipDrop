@@ -1,10 +1,13 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ToastProvider, ToastContainer } from '@/components/Toast';
 
 export default function ToolsDashboard() {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const toolCategories = [
     {
       name: 'Organize PDF',
@@ -66,34 +69,60 @@ export default function ToolsDashboard() {
               <h1 style={{ fontSize: '3rem', marginBottom: '1rem' }}>
                 All <span className="gradient-text">Tools</span>
               </h1>
-              <p style={{ color: 'var(--text-2)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto' }}>
+              <p style={{ color: 'var(--text-2)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto 2rem auto' }}>
                 Free, fast, and secure tools to manipulate your files. 
                 Most tools run directly in your browser without uploading to any server!
               </p>
+              
+              <div style={{ maxWidth: '500px', margin: '0 auto' }}>
+                <input
+                  type="text"
+                  placeholder="Search tools... (e.g., 'merge', 'image')"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="form-input"
+                  style={{ width: '100%', fontSize: '1.1rem', padding: '1rem', borderRadius: '50px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                />
+              </div>
             </div>
 
-            {toolCategories.map((category) => (
-              <section key={category.name} style={{ marginBottom: '4rem' }}>
-                <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--text-1)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
-                  {category.name}
-                </h2>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                  gap: '1.5rem'
-                }}>
-                  {category.tools.map((tool) => (
-                    <Link href={`/tools/${tool.slug}`} key={tool.slug} style={{ textDecoration: 'none' }}>
-                      <div className="card feature-card" style={{ height: '100%', transition: 'transform 0.2s, background 0.2s', cursor: 'pointer' }}>
-                        <div className="feature-icon" style={{ fontSize: '2rem', marginBottom: '1rem' }}>{tool.icon}</div>
-                        <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-1)' }}>{tool.name}</h3>
-                        <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', lineHeight: 1.4 }}>{tool.desc}</p>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            ))}
+            {toolCategories.map((category) => {
+              const filteredTools = category.tools.filter(tool => 
+                tool.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                tool.desc.toLowerCase().includes(searchQuery.toLowerCase())
+              );
+
+              if (filteredTools.length === 0) return null;
+
+              return (
+                <section key={category.name} style={{ marginBottom: '4rem' }}>
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--text-1)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>
+                    {category.name}
+                  </h2>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '1.5rem'
+                  }}>
+                    {filteredTools.map((tool) => (
+                      <Link href={`/tools/${tool.slug}`} key={tool.slug} style={{ textDecoration: 'none' }}>
+                        <div className="card feature-card" style={{ height: '100%', transition: 'transform 0.2s, background 0.2s', cursor: 'pointer' }}>
+                          <div className="feature-icon" style={{ fontSize: '2rem', marginBottom: '1rem' }}>{tool.icon}</div>
+                          <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--text-1)' }}>{tool.name}</h3>
+                          <p style={{ color: 'var(--text-2)', fontSize: '0.9rem', lineHeight: 1.4 }}>{tool.desc}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+
+            {toolCategories.every(c => c.tools.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.desc.toLowerCase().includes(searchQuery.toLowerCase())).length === 0) && (
+              <div style={{ textAlign: 'center', color: 'var(--text-2)', marginTop: '4rem', fontSize: '1.2rem' }}>
+                No tools found matching "{searchQuery}"
+              </div>
+            )}
           </main>
           <ToastContainer />
         </div>
