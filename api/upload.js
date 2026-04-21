@@ -78,6 +78,14 @@ router.post('/presign', requireAuth, async (req, res) => {
     if (!driveRes.ok) {
        const rawText = await driveRes.text();
        console.error(rawText);
+       
+       if (driveRes.status === 403 && (rawText.includes('ACCESS_TOKEN_SCOPE_INSUFFICIENT') || rawText.includes('insufficientPermissions'))) {
+         return res.status(403).json({
+           error: 'Missing Google Drive permissions. Please click "Connect Google Drive" and ensure you check the box to allow Drive access.',
+           requireGoogleAuth: true
+         });
+       }
+       
        throw new Error(`Google API ${driveRes.status}: ${rawText}`);
     }
 

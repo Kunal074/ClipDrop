@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node --env-file=.env.local server.js",
+    "dev": "node --env-file=.env server.js",
     "build": "next build",
     "start": "node server.js",
     "lint": "eslint .",
