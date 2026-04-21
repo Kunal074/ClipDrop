@@ -88,29 +88,53 @@ function DashboardContent() {
 
   // ─── Paste handler ───
   useEffect(() => {
-    const handlePaste = (e) => {
+    const handlePaste = async (e) => {
       const items = e.clipboardData?.items || [];
       for (const item of items) {
         if (item.type.startsWith('image/')) {
           const file = item.getAsFile();
           if (!file) continue;
 
-          // Convert pasted image to base64 data URL — displays instantly, no Drive needed
-          const reader = new FileReader();
-          reader.onload = async (ev) => {
+          // Upload pasted image to R2 — store URL, not base64 in DB
+          try {
+            const formData = new FormData();
+            formData.append('image', file, `paste_${Date.now()}.png`);
+            const res = await fetch('/api/upload-image', {
+              method: 'POST',
+              body: formData,
+              credentials: 'include',
+            });
+            if (!res.ok) throw new Error('Upload failed');
+            const { url, key } = await res.json();
+
             await sendClipRef.current?.({
               type: 'image',
-              content: ev.target.result,  // base64 data URL
+              content: url,           // R2 public URL — no base64 in DB
               fileName: `screenshot_${Date.now()}.png`,
               fileSize: file.size,
+              fileKey: key,            // stored so cron can delete it from R2
               mimeType: file.type,
               isLargeFile: false,
             });
-          };
-          reader.readAsDataURL(file);
+          } catch (err) {
+            console.error('[paste image upload]', err);
+            // Fallback: still use base64 if R2 fails
+            const reader = new FileReader();
+            reader.onload = async (ev) => {
+              await sendClipRef.current?.({
+                type: 'image',
+                content: ev.target.result,
+                fileName: `screenshot_${Date.now()}.png`,
+                fileSize: file.size,
+                mimeType: file.type,
+                isLargeFile: false,
+              });
+            };
+            reader.readAsDataURL(file);
+          }
           return;
         }
-        if (item.kind === 'file') return; // non-image file drop — ignore
+        if (item.kind === 'file') return;
       }
       const text = e.clipboardData?.getData('text');
       if (text?.trim()) setTextInput(text.trim());

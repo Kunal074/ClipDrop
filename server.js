@@ -16,6 +16,7 @@ const authRouter = require('./api/auth');
 const clipsRouter = require('./api/clips');
 const roomsRouter = require('./api/rooms');
 const uploadRouter = require('./api/upload');
+const uploadImageRouter = require('./api/upload-image');
 const convertRouter = require('./api/convert');
 const aiRouter = require('./api/ai');
 
@@ -34,6 +35,7 @@ nextApp.prepare().then(() => {
   expressApp.use('/api/clips', clipsRouter);
   expressApp.use('/api/rooms', roomsRouter);
   expressApp.use('/api/upload', uploadRouter);
+  expressApp.use('/api/upload-image', uploadImageRouter);
   expressApp.use('/api/convert', convertRouter);
   expressApp.use('/api/ai', aiRouter);
 
@@ -111,35 +113,51 @@ nextApp.prepare().then(() => {
   // Expose io for use in API routes
   expressApp.set('io', io);
 
-  // ─── CRON: Clean up expired large-file clips every 5 minutes ───
+  // ─── CRON: Clean up expired clips every 5 minutes ───
   cron.schedule('*/5 * * * *', async () => {
     try {
       const { PrismaClient } = require('@prisma/client');
       const prisma = new PrismaClient();
       const { google } = require('googleapis');
+      const cloudinary = require('cloudinary').v2;
 
-      // Find ALL expired clips (expiresAt is set and in the past, and not pinned)
+      cloudinary.config({
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key:    process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+      });
+
+      // Find ALL expired clips
       const expired = await prisma.clip.findMany({
         where: { expiresAt: { lt: new Date() }, pinned: false },
         include: { user: true }
       });
 
       for (const clip of expired) {
-        // Delete Google Drive file if applicable
-        if (clip.fileKey && clip.user?.googleRefreshToken) {
-          try {
-            const oauth2Client = new google.auth.OAuth2(
-              process.env.GOOGLE_CLIENT_ID,
-              process.env.GOOGLE_CLIENT_SECRET
-            );
-            oauth2Client.setCredentials({ refresh_token: clip.user.googleRefreshToken });
-            const { credentials } = await oauth2Client.refreshAccessToken();
-            await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${credentials.access_token}` }
-            });
-          } catch (driveErr) {
-            console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message);
+        if (clip.fileKey) {
+          if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
+            // Pasted image → delete from Cloudinary
+            try {
+              await cloudinary.uploader.destroy(clip.fileKey);
+            } catch (e) {
+              console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message);
+            }
+          } else if (clip.user?.googleRefreshToken) {
+            // Large file → delete from Google Drive
+            try {
+              const oauth2Client = new google.auth.OAuth2(
+                process.env.GOOGLE_CLIENT_ID,
+                process.env.GOOGLE_CLIENT_SECRET
+              );
+              oauth2Client.setCredentials({ refresh_token: clip.user.googleRefreshToken });
+              const { credentials } = await oauth2Client.refreshAccessToken();
+              await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${credentials.access_token}` }
+              });
+            } catch (driveErr) {
+              console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message);
+            }
           }
         }
         await prisma.clip.delete({ where: { id: clip.id } });

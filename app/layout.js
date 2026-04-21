@@ -1,5 +1,4 @@
 import './globals.css';
-import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata = {
   title: 'ClipDrop — Universal Clipboard & File Sharing',
@@ -21,9 +20,7 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
