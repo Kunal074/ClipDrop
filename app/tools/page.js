@@ -35,17 +35,17 @@ export default function ToolsDashboard() {
     {
       name: 'Convert To PDF',
       tools: [
-        { name: 'Word to PDF', slug: 'word-to-pdf', icon: '📝', desc: 'Make DOC and DOCX files easy to read by converting them' },
-        { name: 'PowerPoint to PDF', slug: 'powerpoint-to-pdf', icon: '📊', desc: 'Make PPT and PPTX slideshows easy to view by converting them' },
-        { name: 'Excel to PDF', slug: 'excel-to-pdf', icon: '📈', desc: 'Make EXCEL spreadsheets easy to read by converting them' },
-        { name: 'JPG to PDF', slug: 'jpg-to-pdf', icon: '🖼️', desc: 'Convert JPG images to PDF in seconds' },
-        { name: 'PNG to PDF', slug: 'png-to-pdf', icon: '🏞️', desc: 'Convert PNG images to PDF in seconds' },
+        { name: 'Word to PDF', slug: 'word-to-pdf', icon: '📝', desc: 'Make DOC and DOCX files easy to read by converting them', keywords: 'doc to pdf docx to pdf office to pdf document to pdf' },
+        { name: 'PowerPoint to PDF', slug: 'powerpoint-to-pdf', icon: '📊', desc: 'Make PPT and PPTX slideshows easy to view by converting them', keywords: 'ppt to pdf pptx to pdf presentation to pdf office to pdf' },
+        { name: 'Excel to PDF', slug: 'excel-to-pdf', icon: '📈', desc: 'Make EXCEL spreadsheets easy to read by converting them', keywords: 'xls to pdf xlsx to pdf spreadsheet to pdf office to pdf' },
+        { name: 'JPG to PDF', slug: 'jpg-to-pdf', icon: '🖼️', desc: 'Convert JPG images to PDF in seconds', keywords: 'image to pdf photo to pdf picture to pdf jpeg to pdf' },
+        { name: 'PNG to PDF', slug: 'png-to-pdf', icon: '🏞️', desc: 'Convert PNG images to PDF in seconds', keywords: 'image to pdf photo to pdf picture to pdf' },
       ],
     },
     {
       name: 'Convert From PDF',
       tools: [
-        { name: 'PDF to JPG', slug: 'pdf-to-jpg', icon: '🖼️', desc: 'Extract images from your PDF or convert each page to a JPG' },
+        { name: 'PDF to JPG', slug: 'pdf-to-jpg', icon: '🖼️', desc: 'Extract images from your PDF or convert each page to a JPG', keywords: 'pdf to image pdf to photo pdf to jpeg' },
       ],
     },
     {
@@ -87,10 +87,12 @@ export default function ToolsDashboard() {
             </div>
 
             {toolCategories.map((category) => {
-              const filteredTools = category.tools.filter(tool => 
-                tool.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                tool.desc.toLowerCase().includes(searchQuery.toLowerCase())
-              );
+              const filteredTools = category.tools.filter(tool => {
+                const query = searchQuery.toLowerCase();
+                return tool.name.toLowerCase().includes(query) || 
+                       tool.desc.toLowerCase().includes(query) ||
+                       (tool.keywords && tool.keywords.toLowerCase().includes(query));
+              });
 
               if (filteredTools.length === 0) return null;
 
@@ -118,7 +120,12 @@ export default function ToolsDashboard() {
               );
             })}
 
-            {toolCategories.every(c => c.tools.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.desc.toLowerCase().includes(searchQuery.toLowerCase())).length === 0) && (
+            {toolCategories.every(c => c.tools.filter(t => {
+              const query = searchQuery.toLowerCase();
+              return t.name.toLowerCase().includes(query) || 
+                     t.desc.toLowerCase().includes(query) ||
+                     (t.keywords && t.keywords.toLowerCase().includes(query));
+            }).length === 0) && (
               <div style={{ textAlign: 'center', color: 'var(--text-2)', marginTop: '4rem', fontSize: '1.2rem' }}>
                 No tools found matching "{searchQuery}"
               </div>
