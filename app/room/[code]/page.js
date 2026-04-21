@@ -20,6 +20,8 @@ function RoomContent() {
   const [onlineCount, setOnlineCount] = useState(1);
   const [typingUser, setTypingUser] = useState('');
   const [textInput, setTextInput] = useState('');
+  const [textComment, setTextComment] = useState('');
+  const [fileComment, setFileComment] = useState('');
   const [sending, setSending] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
@@ -142,13 +144,20 @@ function RoomContent() {
     e.preventDefault();
     if (!textInput.trim()) return;
     const isLink = /^https?:\/\//.test(textInput.trim());
-    await sendClip({ type: isLink ? 'link' : 'text', content: textInput.trim() });
+    await sendClip({ type: isLink ? 'link' : 'text', content: textInput.trim(), comment: textComment.trim() || null });
     setTextInput('');
+    setTextComment('');
   };
 
   const handleFileUpload = async (uploadResult) => {
-    await sendClip(uploadResult);
+    await sendClip({ ...uploadResult, comment: window.__roomFileComment || null });
+    setFileComment('');
+    window.__roomFileComment = '';
   };
+
+  useEffect(() => {
+    window.__roomFileComment = fileComment;
+  }, [fileComment]);
 
   // ─── Delete ─────────────────────────────
   const handleDelete = async (id) => {
@@ -265,7 +274,15 @@ function RoomContent() {
                   placeholder="Paste or type here..."
                   value={textInput}
                   onChange={e => { setTextInput(e.target.value); handleTyping(); }}
-                  style={{ resize: 'vertical', minHeight: 80 }}
+                  style={{ resize: 'vertical', minHeight: 80, marginBottom: 10 }}
+                />
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Add a comment (optional)..."
+                  value={textComment}
+                  onChange={e => setTextComment(e.target.value)}
+                  style={{ marginBottom: 10 }}
                 />
               </div>
               <button
@@ -287,6 +304,14 @@ function RoomContent() {
 
           {/* DropZone */}
           <p className="room-sidebar__title">File Upload</p>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Add a comment before dropping (optional)..."
+            value={fileComment}
+            onChange={e => setFileComment(e.target.value)}
+            style={{ marginBottom: 10 }}
+          />
           <DropZone
             onUploadComplete={handleFileUpload}
             roomCode={roomCode}

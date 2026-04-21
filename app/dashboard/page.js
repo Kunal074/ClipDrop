@@ -17,10 +17,13 @@ function DashboardContent() {
   const [fetching, setFetching] = useState(true);
   const [soloRoomCode, setSoloRoomCode] = useState('');
   const [textInput, setTextInput] = useState('');
+  const [textComment, setTextComment] = useState('');
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [imageComment, setImageComment] = useState('');
+  const [fileComment, setFileComment] = useState('');
   const [sending, setSending] = useState(false);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [imageUrlInput, setImageUrlInput] = useState('');
 
   const socketRef = useRef(null);
   const feedRef = useRef(null);
@@ -174,17 +177,30 @@ function DashboardContent() {
     e.preventDefault();
     if (!textInput.trim()) return;
     const isLink = /^https?:\/\//.test(textInput.trim());
-    await sendClip({ type: isLink ? 'link' : 'text', content: textInput.trim() });
+    await sendClip({ type: isLink ? 'link' : 'text', content: textInput.trim(), comment: textComment.trim() || null });
     setTextInput('');
+    setTextComment('');
   };
 
-  const handleFileUpload = useCallback((uploadResult) => sendClip(uploadResult), [sendClip]);
+  const handleFileUpload = useCallback((uploadResult) => {
+    // Use the functional form to access the latest state if needed, or just pass the ref.
+    // However, to avoid dependency issues with useCallback, let's just use the state directly.
+    sendClip({ ...uploadResult, comment: window.__fileComment || null });
+    setFileComment('');
+    window.__fileComment = '';
+  }, [sendClip]);
+
+  // Keep window.__fileComment in sync for the callback
+  useEffect(() => {
+    window.__fileComment = fileComment;
+  }, [fileComment]);
 
   const handleImageUrlSubmit = async (e) => {
     e.preventDefault();
     if (!imageUrlInput.trim()) return;
-    await sendClip({ type: 'image', content: imageUrlInput.trim() });
+    await sendClip({ type: 'image', content: imageUrlInput.trim(), comment: imageComment.trim() || null });
     setImageUrlInput('');
+    setImageComment('');
     toast.success('Image added from URL');
   };
 
@@ -307,6 +323,14 @@ function DashboardContent() {
                 onChange={e => setTextInput(e.target.value)}
                 style={{ resize: 'vertical', minHeight: 80, marginBottom: 10 }}
               />
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Add a comment (optional)..."
+                value={textComment}
+                onChange={e => setTextComment(e.target.value)}
+                style={{ marginBottom: 10 }}
+              />
               <button
                 type="submit"
                 className="btn btn-primary btn-full"
@@ -318,6 +342,14 @@ function DashboardContent() {
           </div>
 
           <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Drop File or Paste Image</p>
+          <input
+            type="text"
+            className="form-input"
+            placeholder="Add a comment before dropping (optional)..."
+            value={fileComment}
+            onChange={e => setFileComment(e.target.value)}
+            style={{ marginBottom: 10 }}
+          />
           <DropZone
             ref={dropZoneRef}
             onUploadComplete={handleFileUpload}
@@ -333,6 +365,14 @@ function DashboardContent() {
               placeholder="https://example.com/image.png"
               value={imageUrlInput}
               onChange={e => setImageUrlInput(e.target.value)}
+              style={{ marginBottom: 10 }}
+            />
+            <input
+              type="text"
+              className="form-input"
+              placeholder="Add a comment (optional)..."
+              value={imageComment}
+              onChange={e => setImageComment(e.target.value)}
               style={{ marginBottom: 10 }}
             />
             <button
