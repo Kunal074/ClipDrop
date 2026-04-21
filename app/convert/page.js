@@ -267,7 +267,7 @@ function ConvertContent() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
       <Navbar />
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '5rem 1rem 2rem 1rem' }}>
         {/* Hero */}
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h1 style={{
@@ -295,18 +295,6 @@ function ConvertContent() {
           ))}
         </div>
 
-        {/* LibreOffice notice */}
-        <div style={{
-          marginTop: '2rem',
-          padding: '1rem 1.25rem',
-          borderRadius: 12,
-          background: 'rgba(245,158,11,0.08)',
-          border: '1px solid rgba(245,158,11,0.25)',
-          fontSize: '0.82rem',
-          color: 'var(--text-2)',
-        }}>
-          <strong>📌 Note on Office → PDF:</strong> This requires <a href="https://www.libreoffice.org/download/download/" target="_blank" rel="noopener noreferrer" style={{ color: '#f59e0b' }}>LibreOffice</a> to be installed on the server. All other conversions (Image → PDF, Merge, Compress) work without any additional software.
-        </div>
       </div>
       <ToastContainer />
     </div>

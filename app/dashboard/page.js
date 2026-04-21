@@ -361,6 +361,7 @@ function DashboardContent() {
                 onDelete={handleDelete}
                 onEdit={handleEdit}
                 onPin={handlePin}
+                onNewClip={sendClip}
               />
             ))
           )}
