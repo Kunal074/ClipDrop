@@ -54,37 +54,49 @@
   /* Glass */
   --glass: rgba(255, 255, 255, 0.04);
   --glass-strong: rgba(255, 255, 255, 0.08);
+
+  /* Navbar specific — slightly transparent dark */
+  --bg-nav: oklch(0.13 0.02 260 / 0.92);
 }
 
 /* ─── Light Theme ────────────────────────────── */
 [data-theme="light"] {
-  --bg:           oklch(0.97 0.005 260);
-  --bg-2:         oklch(0.93 0.008 260);
-  --bg-3:         oklch(0.89 0.010 260);
-  --border:       oklch(0.80 0.015 260);
-  --border-light: oklch(0.74 0.015 260);
+  /* Backgrounds — clean, warm white */
+  --bg:           #f8f7ff;
+  --bg-2:         #ffffff;
+  --bg-3:         #f0eeff;
+  --border:       #e2dff5;
+  --border-light: #cdc9e8;
 
-  --text-1:       oklch(0.15 0.02 260);
-  --text-2:       oklch(0.35 0.02 260);
-  --text-3:       oklch(0.55 0.02 260);
+  /* Text — rich, high contrast */
+  --text-1:       #1a1630;
+  --text-2:       #4a4568;
+  --text-3:       #8b85a8;
 
-  --primary:      oklch(0.50 0.20 250);
-  --primary-dim:  oklch(0.42 0.18 250);
-  --primary-glow: oklch(0.50 0.20 250 / 0.20);
-  --accent:       oklch(0.45 0.18 160);
-  --accent-dim:   oklch(0.38 0.16 160);
-  --accent-glow:  oklch(0.45 0.18 160 / 0.20);
+  /* Brand — deeper, more saturated for light bg */
+  --primary:      #5b4ef8;
+  --primary-dim:  #4a3de0;
+  --primary-glow: rgba(91,78,248,0.18);
+  --accent:       #0ba882;
+  --accent-dim:   #099470;
+  --accent-glow:  rgba(11,168,130,0.18);
 
-  --success:      oklch(0.45 0.18 150);
-  --warning:      oklch(0.52 0.18 65);
-  --danger:       oklch(0.48 0.22 25);
+  /* Status */
+  --success:      #0ba882;
+  --warning:      #d97706;
+  --danger:       #dc2626;
 
-  --ghost-body:      oklch(0.75 0.06 260);
-  --ghost-highlight: oklch(0.88 0.03 260);
-  --ghost-shadow:    oklch(0.60 0.04 260);
+  /* Ghost */
+  --ghost-body:      #c4b8f8;
+  --ghost-highlight: #e8e2ff;
+  --ghost-shadow:    #9080e0;
 
-  --glass: rgba(0, 0, 0, 0.04);
-  --glass-strong: rgba(0, 0, 0, 0.08);
+  /* Glass */
+  --glass: rgba(255,255,255,0.72);
+  --glass-strong: rgba(255,255,255,0.9);
+
+  /* Navbar */
+  --bg-nav: rgba(255,255,255,0.95);
 }
 
 /* ─── Reset ─────────────────────────────────── */
@@ -200,8 +212,8 @@ p  { color: var(--text-2); }
 }
 
 .glass {
-  background: oklch(0.17 0.02 260 / 0.75);
-  border: 1px solid oklch(0.32 0.02 260 / 0.6);
+  background: var(--glass);
+  border: 1px solid var(--border);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -266,10 +278,11 @@ p  { color: var(--text-2); }
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 2rem;
   height: 60px;
-  background: oklch(0.13 0.02 260 / 0.85);
+  background: var(--bg-nav);
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .navbar-logo {
