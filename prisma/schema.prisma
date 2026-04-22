@@ -47,6 +47,7 @@ model Clip {
   fileKey     String    @default("")
   mimeType    String    @default("")
   pinned      Boolean   @default(false)
+  isPending   Boolean   @default(false)
   isLargeFile Boolean   @default(false)
   expiresAt   DateTime?
   editedAt    DateTime?

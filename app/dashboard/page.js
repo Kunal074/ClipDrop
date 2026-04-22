@@ -256,6 +256,23 @@ function DashboardContent() {
     }
   };
 
+  const acceptClip = async (id) => {
+    try {
+      const token = localStorage.getItem('clipdrop_token');
+      const res = await fetch(`/api/clips/${id}/accept`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setClips(prev => prev.map(c => c.id === id ? data.clip : c));
+      toast.success('Clip accepted!');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+
   const createRoom = async () => {
     setCreatingRoom(true);
     try {
@@ -280,8 +297,11 @@ function DashboardContent() {
 
   const getToken = () => localStorage.getItem('clipdrop_token');
 
+  const activeClips = clips.filter(c => !c.isPending);
+  const pendingClips = clips.filter(c => c.isPending);
+
   const FILTERS = ['all', 'text', 'image', 'file', 'link'];
-  const filtered = clips.filter(c => {
+  const filtered = activeClips.filter(c => {
     const matchFilter = filter === 'all' || c.type === filter;
     const matchSearch = !search ||
       c.content?.toLowerCase().includes(search.toLowerCase()) ||
@@ -411,6 +431,40 @@ function DashboardContent() {
         </aside>
 
         <main className="room-feed" ref={feedRef}>
+          {pendingClips.length > 0 && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1rem', color: '#f59e0b', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                📥 Inbox ({pendingClips.length} pending)
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {pendingClips.map(clip => (
+                  <div key={clip.id} style={{ 
+                    background: 'rgba(245,158,11,0.05)', 
+                    border: '1px solid rgba(245,158,11,0.2)', 
+                    padding: '1rem', 
+                    borderRadius: '8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '1rem'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.9rem', color: '#fff' }}>
+                        <strong>@{clip.username}</strong> sent you a {clip.type} clip.
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button onClick={() => acceptClip(clip.id)} className="btn btn-primary btn-sm" style={{ background: '#10b981', color: '#fff' }}>Accept</button>
+                        <button onClick={() => handleDelete(clip.id)} className="btn btn-secondary btn-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reject</button>
+                      </div>
+                    </div>
+                    {/* Minimal preview */}
+                    {clip.type === 'text' && <div style={{ fontSize: '0.8rem', color: '#9ca3af', background: '#111', padding: '0.5rem', borderRadius: '4px' }}>{clip.content.substring(0, 100)}{clip.content.length > 100 ? '...' : ''}</div>}
+                    {clip.type === 'image' && <img src={clip.content} alt="preview" style={{ height: 60, width: 'auto', borderRadius: '4px' }} />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="filter-tabs" role="tablist" style={{ marginBottom: '1.5rem' }}>
             {FILTERS.map(f => {
               const count = f === 'all' ? clips.length : clips.filter(c => c.type === f).length;

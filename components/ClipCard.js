@@ -89,6 +89,12 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState(false);
 
+  // Sharing state
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareTarget, setShareTarget] = useState('');
+  const [shareLoading, setShareLoading] = useState(false);
+
+
   // OCR state
   const [ocrLoading, setOcrLoading] = useState(false);
   const [ocrProgress, setOcrProgress] = useState('');
@@ -204,6 +210,29 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   const typeIcon = { text: '📝', image: '🖼️', file: '📦', link: '🔗' }[clip.type] || '📋';
   const typeBadgeClass = { text: 'badge-blue', image: 'badge-purple', file: 'badge-amber', link: 'badge-teal' }[clip.type] || 'badge-blue';
 
+  const handleShare = async () => {
+    if (!shareTarget.trim()) return;
+    setShareLoading(true);
+    try {
+      const token = localStorage.getItem('clipdrop_token');
+      const res = await fetch(`/api/clips/${clip.id}/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ target: shareTarget }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      alert('Clip shared successfully! 🚀');
+      setIsSharing(false);
+      setShareTarget('');
+    } catch (err) {
+      alert('Share failed: ' + err.message);
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
   return (
     <>
       {lightbox && <ImageLightbox src={clip.content} alt={clip.fileName || 'Image'} onClose={() => setLightbox(false)} />}
@@ -261,6 +290,15 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
                 {editing ? '💾' : '✏️'}
               </button>
             )}
+            <button
+              onClick={() => setIsSharing(!isSharing)}
+              className="icon-btn"
+              title="Share to Room or User"
+              id={`btn-share-${clip.id}`}
+              style={{ color: isSharing ? '#00d4ff' : undefined }}
+            >
+              📤
+            </button>
             {onPin && (
               <button
                 onClick={() => onPin(clip.id)}
@@ -279,6 +317,34 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
             )}
           </div>
         </div>
+
+        {/* Share Form */}
+        {isSharing && (
+          <div style={{
+            padding: '0.75rem', fontSize: '0.8rem', background: 'rgba(0,212,255,0.08)',
+            borderTop: '1px solid rgba(0,212,255,0.2)', borderBottom: '1px solid rgba(0,212,255,0.2)',
+            display: 'flex', gap: '0.5rem', alignItems: 'center'
+          }}>
+            <input 
+              type="text" 
+              className="clip-edit-input" 
+              placeholder="Enter Room Code or @username..."
+              value={shareTarget}
+              onChange={e => setShareTarget(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleShare()}
+              autoFocus
+              style={{ flex: 1, padding: '0.4rem', height: 'auto', marginBottom: 0 }}
+            />
+            <button 
+              className="btn btn-primary btn-sm" 
+              onClick={handleShare} 
+              disabled={shareLoading || !shareTarget.trim()}
+              style={{ padding: '0.4rem 0.8rem', minHeight: 'auto', height: 'auto' }}
+            >
+              {shareLoading ? '⏳' : 'Send'}
+            </button>
+          </div>
+        )}
 
         {/* OCR progress bar */}
         {ocrProgress && (

@@ -184,6 +184,31 @@ nextApp.prepare().then(() => {
         console.log(`[cron] Cleaned up ${expired.length} expired clip(s)`);
       }
 
+      // Cleanup 1: Delete empty rooms older than 30 minutes (excluding SOLO_ rooms)
+      const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const emptyRooms = await prisma.room.deleteMany({
+        where: {
+          createdAt: { lt: thirtyMinsAgo },
+          code: { not: { startsWith: 'SOLO_' } },
+          clips: { none: {} }
+        }
+      });
+      if (emptyRooms.count > 0) {
+        console.log(`[cron] Deleted ${emptyRooms.count} empty room(s)`);
+      }
+
+      // Cleanup 2: Delete non-empty rooms older than 3 days (excluding SOLO_ rooms)
+      const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      const oldRooms = await prisma.room.deleteMany({
+        where: {
+          createdAt: { lt: threeDaysAgo },
+          code: { not: { startsWith: 'SOLO_' } }
+        }
+      });
+      if (oldRooms.count > 0) {
+        console.log(`[cron] Deleted ${oldRooms.count} old room(s)`);
+      }
+
       await prisma.$disconnect();
     } catch (err) {
       console.error('[cron] Cleanup error:', err.message);

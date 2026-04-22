@@ -142,9 +142,16 @@ router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const clip = await prisma.clip.findUnique({ where: { id } });
+    const clip = await prisma.clip.findUnique({
+      where: { id },
+      include: { room: true }
+    });
     if (!clip) return res.status(404).json({ error: 'Clip not found' });
-    if (clip.userId !== req.user.id) return res.status(403).json({ error: 'Not your clip' });
+    
+    // Allow creator or room owner to delete
+    if (clip.userId !== req.user.id && clip.room.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'Not your clip' });
+    }
 
     // Delete from storage based on clip type
     if (clip.fileKey) {
@@ -170,7 +177,88 @@ router.delete('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// PATCH /api/clips/:id/pin  → toggle pin
+// POST /api/clips/:id/share  → share clip to room or user
+router.post('/:id/share', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { target } = req.body;
+    if (!target) return res.status(400).json({ error: 'Target is required' });
+
+    const clip = await prisma.clip.findUnique({ where: { id } });
+    if (!clip) return res.status(404).json({ error: 'Clip not found' });
+
+    let targetRoomCode = target.trim();
+    
+    // Check if it's a room code first
+    let room = await prisma.room.findUnique({ where: { code: targetRoomCode } });
+    
+    if (!room) {
+      // If not a room, maybe it's a username (strip @ if present)
+      const usernameMatch = targetRoomCode.startsWith('@') ? targetRoomCode.substring(1) : targetRoomCode;
+      const targetUser = await prisma.user.findUnique({ where: { username: usernameMatch } });
+      
+      if (targetUser) {
+        targetRoomCode = `SOLO_${targetUser.id}`;
+        room = await prisma.room.findUnique({ where: { code: targetRoomCode } });
+        if (!room) {
+          room = await prisma.room.create({
+            data: { code: targetRoomCode, name: 'Personal Workspace', ownerId: targetUser.id }
+          });
+        }
+      } else {
+        return res.status(404).json({ error: 'Room code or username not found' });
+      }
+    }
+
+    const sharedClip = await prisma.clip.create({
+      data: {
+        roomCode: targetRoomCode,
+        userId: (targetRoomCode.startsWith('SOLO_') && room?.ownerId) ? room.ownerId : req.user.id,
+        username: req.user.username,
+        type: clip.type,
+        content: clip.content,
+        comment: clip.comment,
+        fileName: clip.fileName,
+        fileSize: clip.fileSize,
+        fileKey: clip.fileKey,
+        mimeType: clip.mimeType,
+        isLargeFile: clip.isLargeFile,
+        isPending: targetRoomCode.startsWith('SOLO_'), // Requires accept if sent to user
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000), // Reset expiry for the new clip
+      },
+    });
+
+    return res.json({ success: true, sharedClip });
+  } catch (err) {
+    console.error('[clips SHARE]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// PATCH /api/clips/:id/accept  → accept a pending shared clip
+router.patch('/:id/accept', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const clip = await prisma.clip.findUnique({
+      where: { id },
+      include: { room: true }
+    });
+    
+    if (!clip) return res.status(404).json({ error: 'Clip not found' });
+    if (clip.room.ownerId !== req.user.id) return res.status(403).json({ error: 'Not authorized' });
+
+    const updated = await prisma.clip.update({
+      where: { id },
+      data: { isPending: false }
+    });
+
+    return res.json({ success: true, clip: updated });
+  } catch (err) {
+    console.error('[clips ACCEPT]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
 router.patch('/:id/pin', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
