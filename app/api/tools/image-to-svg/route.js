@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import potrace from 'potrace';
 import sharp from 'sharp';
+import ImageTracer from 'imagetracerjs';
 
 export async function POST(req) {
   try {
@@ -13,24 +13,27 @@ export async function POST(req) {
     const arrayBuffer = await file.arrayBuffer();
     const inputBuffer = Buffer.from(arrayBuffer);
 
-    // Normalize the image to PNG using sharp — potrace needs a clean raster input
-    const pngBuffer = await sharp(inputBuffer).png().toBuffer();
+    // Use sharp to get raw RGBA pixel data
+    const { data, info } = await sharp(inputBuffer)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-    return new Promise((resolve) => {
-      potrace.trace(pngBuffer, { type: 'png' }, (err, svg) => {
-        if (err) {
-          console.error('Potrace error:', err);
-          return resolve(
-            NextResponse.json({ error: 'Tracing failed: ' + (err.message || 'Unknown error') }, { status: 500 })
-          );
-        }
+    // Build an ImageData-like object that imagetracerjs understands
+    const imgData = {
+      width: info.width,
+      height: info.height,
+      data: new Uint8ClampedArray(data),
+    };
 
-        resolve(new NextResponse(svg, {
-          status: 200,
-          headers: { 'Content-Type': 'image/svg+xml' },
-        }));
-      });
+    // Trace to SVG string
+    const svgString = ImageTracer.imagedataToSVG(imgData, { scale: 1 });
+
+    return new NextResponse(svgString, {
+      status: 200,
+      headers: { 'Content-Type': 'image/svg+xml' },
     });
+
   } catch (error) {
     console.error('Image to SVG API error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });

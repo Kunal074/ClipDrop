@@ -19,8 +19,14 @@ export default function ImageToSvgPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Server error');
+        let errorMsg = 'Server error';
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } catch (_) {
+          errorMsg = `Server error (${response.status})`;
+        }
+        throw new Error(errorMsg);
       }
 
       const svgBlob = await response.blob();
