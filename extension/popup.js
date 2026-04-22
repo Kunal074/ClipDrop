@@ -1,4 +1,4 @@
-const API_URL = 'https://clipdrop-f8zi.onrender.com';
+const API_URL = 'https://clipdrop.online';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
