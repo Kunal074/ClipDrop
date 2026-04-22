@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthProvider, useAuth } from '@/components/AuthProvider';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { ToastProvider, ToastContainer, useToast } from '@/components/Toast';
 
 function HomeContent() {
@@ -115,6 +116,7 @@ function HomeContent() {
         </section>
       </main>
 
+      <Footer />
       <ToastContainer />
     </div>
   );
