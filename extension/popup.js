@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://clipdrop-f8zi.onrender.com';
 
 document.addEventListener('DOMContentLoaded', async () => {
   // DOM Elements
@@ -174,7 +174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const result = await chrome.storage.local.get(historyKey);
       let history = result[historyKey] || [];
       history.unshift({ type, content, comment, timestamp: Date.now() });
-      if (history.length > 5) history.pop(); // Keep only last 5
+      if (history.length > 3) history.pop(); // Keep only last 3
       
       await chrome.storage.local.set({ [historyKey]: history });
       renderHistory(history, isPersonal ? personalHistory : roomHistory);

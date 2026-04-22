@@ -152,17 +152,24 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
+      return res.status(400).json({ error: 'Email/Username and password are required' });
     }
 
-    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    // Check if it looks like an email, otherwise treat as username
+    const isEmail = email.includes('@');
+    const user = await prisma.user.findFirst({
+      where: isEmail
+        ? { email: email.toLowerCase() }
+        : { username: email }, // "email" field reused for the identifier
+    });
+
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Block unverified users

@@ -24,7 +24,17 @@ nextApp.prepare().then(() => {
   const expressApp = express();
 
   expressApp.use(cors({
-    origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+    origin: function (origin, callback) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      // Allow requests with no origin (like mobile apps or curl requests)
+      // Allow the main app URL
+      // Allow any Chrome Extension
+      if (!origin || origin === appUrl || origin.startsWith('chrome-extension://')) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }));
   expressApp.use(express.json({ limit: '10mb' }));
@@ -49,7 +59,14 @@ nextApp.prepare().then(() => {
 
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+      origin: function (origin, callback) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        if (!origin || origin === appUrl || origin.startsWith('chrome-extension://')) {
+          callback(null, true);
+        } else {
+          callback(new Error('Not allowed by CORS'));
+        }
+      },
       methods: ['GET', 'POST'],
       credentials: true,
     },

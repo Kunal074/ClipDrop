@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import potrace from 'potrace';
+import sharp from 'sharp';
 
 export async function POST(req) {
   try {
@@ -10,27 +11,28 @@ export async function POST(req) {
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const inputBuffer = Buffer.from(arrayBuffer);
 
-    // Potrace setup
+    // Normalize the image to PNG using sharp — potrace needs a clean raster input
+    const pngBuffer = await sharp(inputBuffer).png().toBuffer();
+
     return new Promise((resolve) => {
-      potrace.trace(buffer, (err, svg) => {
+      potrace.trace(pngBuffer, { type: 'png' }, (err, svg) => {
         if (err) {
           console.error('Potrace error:', err);
-          return resolve(NextResponse.json({ error: 'Failed to trace image: ' + err.message }, { status: 500 }));
+          return resolve(
+            NextResponse.json({ error: 'Tracing failed: ' + (err.message || 'Unknown error') }, { status: 500 })
+          );
         }
 
-        // Return the SVG as a plain text response
         resolve(new NextResponse(svg, {
           status: 200,
-          headers: {
-            'Content-Type': 'image/svg+xml',
-          },
+          headers: { 'Content-Type': 'image/svg+xml' },
         }));
       });
     });
   } catch (error) {
     console.error('Image to SVG API error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

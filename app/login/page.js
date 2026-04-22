@@ -11,7 +11,7 @@ function LoginContent() {
   const router = useRouter();
   const toast = useToast();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
@@ -20,7 +20,7 @@ function LoginContent() {
 
   const validate = () => {
     const e = {};
-    if (!email) e.email = 'Email is required';
+    if (!identifier) e.identifier = 'Email or username is required';
     if (!password) e.password = 'Password is required';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -34,7 +34,7 @@ function LoginContent() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: identifier, password }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
@@ -65,21 +65,21 @@ function LoginContent() {
             <form className="auth-form" onSubmit={handleSubmit} id="form-login" noValidate>
               {/* Email */}
               <div className="form-group">
-                <label className="form-label" htmlFor="email">Email</label>
+                <label className="form-label" htmlFor="identifier">Email or Username</label>
                 <div className="input-wrap">
-                  <span className="input-icon">✉</span>
+                  <span className="input-icon">👤</span>
                   <input
-                    id="email"
-                    type="email"
-                    className={`form-input has-icon ${errors.email ? 'input-error' : ''}`}
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
+                    id="identifier"
+                    type="text"
+                    className={`form-input has-icon ${errors.identifier ? 'input-error' : ''}`}
+                    placeholder="you@example.com or @username"
+                    value={identifier}
+                    onChange={e => setIdentifier(e.target.value)}
                     onFocus={() => setIsPasswordFocused(false)}
-                    autoComplete="email"
+                    autoComplete="username"
                   />
                 </div>
-                {errors.email && <span className="form-error">{errors.email}</span>}
+                {errors.identifier && <span className="form-error">{errors.identifier}</span>}
               </div>
 
               {/* Password */}
