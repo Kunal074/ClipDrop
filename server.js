@@ -19,6 +19,8 @@ const uploadRouter = require('./api/upload');
 const uploadImageRouter = require('./api/upload-image');
 const convertRouter = require('./api/convert');
 const aiRouter = require('./api/ai');
+const adminRouter = require('./api/admin');
+const trackRouter = require('./api/track');
 
 nextApp.prepare().then(() => {
   const expressApp = express();
@@ -48,6 +50,8 @@ nextApp.prepare().then(() => {
   expressApp.use('/api/upload-image', uploadImageRouter);
   expressApp.use('/api/convert', convertRouter);
   expressApp.use('/api/ai', aiRouter);
+  expressApp.use('/api/admin', adminRouter);
+  expressApp.use('/api/track', trackRouter);
 
   // All other requests go to Next.js
   expressApp.all('*', (req, res) => {

@@ -66,3 +66,14 @@ enum ClipType {
   file
   link
 }
+
+model ToolUsage {
+  id        String   @id @default(uuid())
+  toolName  String
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([toolName])
+  @@index([userId])
+  @@index([createdAt])
+}
