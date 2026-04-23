@@ -134,21 +134,19 @@ nextApp.prepare().then(() => {
   // Expose io for use in API routes
   expressApp.set('io', io);
 
-  // ─── CRON: Clean up expired clips every 5 minutes ───
+  // ─── CRON: Clean up expired clips + stale rooms every 5 minutes ───
+  const prisma = require('./lib/prisma');
+  const { google } = require('googleapis');
+  const cloudinary = require('cloudinary').v2;
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key:    process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+
   cron.schedule('*/5 * * * *', async () => {
     try {
-      const { PrismaClient } = require('@prisma/client');
-      const prisma = new PrismaClient();
-      const { google } = require('googleapis');
-      const cloudinary = require('cloudinary').v2;
-
-      cloudinary.config({
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-        api_key:    process.env.CLOUDINARY_API_KEY,
-        api_secret: process.env.CLOUDINARY_API_SECRET,
-      });
-
-      // Find ALL expired clips
+      // ── Expired clips ──
       const expired = await prisma.clip.findMany({
         where: { expiresAt: { lt: new Date() }, pinned: false },
         include: { user: true }
@@ -157,38 +155,25 @@ nextApp.prepare().then(() => {
       for (const clip of expired) {
         if (clip.fileKey) {
           if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
-            // Pasted image → delete from Cloudinary
-            try {
-              await cloudinary.uploader.destroy(clip.fileKey);
-            } catch (e) {
-              console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message);
-            }
+            try { await cloudinary.uploader.destroy(clip.fileKey); }
+            catch (e) { console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message); }
           } else if (clip.user?.googleRefreshToken) {
-            // Large file → delete from Google Drive
             try {
-              const oauth2Client = new google.auth.OAuth2(
-                process.env.GOOGLE_CLIENT_ID,
-                process.env.GOOGLE_CLIENT_SECRET
-              );
+              const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
               oauth2Client.setCredentials({ refresh_token: clip.user.googleRefreshToken });
               const { credentials } = await oauth2Client.refreshAccessToken();
               await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${credentials.access_token}` }
               });
-            } catch (driveErr) {
-              console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message);
-            }
+            } catch (driveErr) { console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message); }
           }
         }
         await prisma.clip.delete({ where: { id: clip.id } });
       }
+      if (expired.length > 0) console.log(`[cron] Cleaned up ${expired.length} expired clip(s)`);
 
-      if (expired.length > 0) {
-        console.log(`[cron] Cleaned up ${expired.length} expired clip(s)`);
-      }
-
-      // Cleanup 1: Delete empty rooms older than 30 minutes (excluding SOLO_ rooms)
+      // ── Empty rooms older than 30 minutes (skip SOLO_) ──
       const thirtyMinsAgo = new Date(Date.now() - 30 * 60 * 1000);
       const emptyRooms = await prisma.room.deleteMany({
         where: {
@@ -197,11 +182,9 @@ nextApp.prepare().then(() => {
           clips: { none: {} }
         }
       });
-      if (emptyRooms.count > 0) {
-        console.log(`[cron] Deleted ${emptyRooms.count} empty room(s)`);
-      }
+      if (emptyRooms.count > 0) console.log(`[cron] Deleted ${emptyRooms.count} empty room(s)`);
 
-      // Cleanup 2: Delete non-empty rooms older than 3 days (excluding SOLO_ rooms)
+      // ── Non-empty rooms older than 3 days (skip SOLO_) ──
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       const oldRooms = await prisma.room.deleteMany({
         where: {
@@ -209,11 +192,8 @@ nextApp.prepare().then(() => {
           code: { not: { startsWith: 'SOLO_' } }
         }
       });
-      if (oldRooms.count > 0) {
-        console.log(`[cron] Deleted ${oldRooms.count} old room(s)`);
-      }
+      if (oldRooms.count > 0) console.log(`[cron] Deleted ${oldRooms.count} old room(s)`);
 
-      await prisma.$disconnect();
     } catch (err) {
       console.error('[cron] Cleanup error:', err.message);
     }
