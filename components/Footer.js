@@ -99,7 +99,7 @@ export default function Footer() {
         textAlign: 'center'
       }}>
         <p style={{ margin: 0 }}>&copy; {new Date().getFullYear()} ClipDrop. All rights reserved.</p>
-        <p style={{ margin: 0, fontSize: '0.8rem' }}>Made with ❤️ by Kunal Sahu</p>
+        <p style={{ margin: 0, fontSize: '0.8rem' }}>Made with ❤️ by Kunal</p>
       </div>
 
       <style jsx>{`
