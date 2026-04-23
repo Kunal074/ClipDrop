@@ -54,8 +54,11 @@ function HomeContent() {
             <span className="gradient-text">everywhere</span>
           </h1>
           <p>
-            Paste text, images, and massive files — instantly accessible from any device. 
-            Connect your Google Drive for unlimited cloud file storage. Over 15+ free utility tools included!
+            Your cross-device clipboard with real-time sync and automatic 30-minute expiry.
+            No account needed to join rooms — just paste, share, and it disappears.
+          </p>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-3)', marginTop: '-0.5rem' }}>
+            Plus 15+ free PDF &amp; image tools. Connect Google Drive for 1GB file uploads.
           </p>
 
           <div className="hero-actions">
