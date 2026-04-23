@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/components/AuthProvider';
 import { ToastProvider, ToastContainer, useToast } from '@/components/Toast';
@@ -9,6 +9,17 @@ export function ToolWorkspaceContent({ title, description, accept, multiple = fa
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef(null);
   const toast = useToast();
+
+  // Track tool usage for admin analytics
+  useEffect(() => {
+    if (!title) return;
+    const toolName = title.toLowerCase().replace(/\s+/g, '-');
+    fetch('/api/track/tool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ toolName }),
+    }).catch(() => {}); // Silent fail — tracking is non-critical
+  }, [title]);
 
   const handleDrop = (e) => {
     e.preventDefault();

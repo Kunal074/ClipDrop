@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 
+const ADMIN_EMAILS = ['clipdrop79@gmail.com', 'kunalsahu232777@gmail.com'];
+
 export default function Navbar() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
@@ -29,6 +31,11 @@ export default function Navbar() {
                 <Link href="/dashboard" className="navbar-link" id="nav-dashboard">
                   Dashboard
                 </Link>
+                {ADMIN_EMAILS.includes(user.email?.toLowerCase()) && (
+                  <Link href="/admin" className="navbar-link" id="nav-admin" style={{ color: '#00d4ff', fontWeight: 600 }}>
+                    🛡️ Admin
+                  </Link>
+                )}
                 <span className="navbar-user">@{user.username}</span>
                 <button onClick={handleLogout} className="btn btn-ghost btn-sm" id="nav-logout">
                   Logout

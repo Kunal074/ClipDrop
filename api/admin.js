@@ -42,7 +42,23 @@ router.get('/stats', requireAuth, requireAdmin, async (req, res) => {
       where: { createdAt: { gte: todayStart } },
     });
 
-    res.json({ totalUsers, totalClips, totalRooms, totalToolUses, newUsersThisWeek, clipsToday });
+    // Active rooms (created in last 24h)
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const activeRooms = await prisma.room.count({
+      where: { createdAt: { gte: dayAgo } },
+    });
+
+    // Clip type breakdown
+    const clipTypes = await prisma.clip.groupBy({
+      by: ['type'],
+      _count: { type: true },
+    });
+    const clipBreakdown = clipTypes.reduce((acc, c) => {
+      acc[c.type] = c._count.type;
+      return acc;
+    }, {});
+
+    res.json({ totalUsers, totalClips, totalRooms, totalToolUses, newUsersThisWeek, clipsToday, activeRooms, clipBreakdown });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -111,6 +127,36 @@ router.get('/activity', requireAuth, requireAdmin, async (req, res) => {
       },
     });
     res.json({ clips });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/admin/rooms — rooms analytics
+router.get('/rooms', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const rooms = await prisma.room.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        createdAt: true,
+        owner: { select: { username: true, email: true } },
+        _count: { select: { clips: true } },
+      },
+    });
+
+    // Rooms with most clips
+    const topRooms = [...rooms].sort((a, b) => b._count.clips - a._count.clips).slice(0, 10);
+
+    // Solo vs shared rooms
+    const soloRooms = rooms.filter(r => r.code.startsWith('SOLO_')).length;
+    const sharedRooms = rooms.length - soloRooms;
+
+    res.json({ rooms, topRooms, soloRooms, sharedRooms });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

@@ -160,7 +160,7 @@ router.post('/login', async (req, res) => {
     const user = await prisma.user.findFirst({
       where: isEmail
         ? { email: email.toLowerCase() }
-        : { username: email }, // "email" field reused for the identifier
+        : { username: { equals: email, mode: 'insensitive' } }, // case-insensitive username match
     });
 
     if (!user) {
