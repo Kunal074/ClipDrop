@@ -21,6 +21,16 @@ function sanitize(str) {
     .slice(0, 50000); // max 50k chars per field
 }
 
+// Bump lastActivityAt on the room — resets the 3-day expiry window
+async function bumpRoomActivity(roomCode) {
+  try {
+    await prisma.room.update({
+      where: { code: roomCode },
+      data: { lastActivityAt: new Date() },
+    });
+  } catch (_) {} // silent — room may already be gone
+}
+
 // GET /api/clips?roomCode=XXX  → get clips for a room
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -109,6 +119,7 @@ router.post('/', optionalAuth, async (req, res) => {
       },
     });
 
+    await bumpRoomActivity(roomCode); // reset 3-day expiry window
     return res.status(201).json({ clip });
   } catch (err) {
     console.error('[clips POST]', err);
@@ -141,6 +152,7 @@ router.put('/:id', requireAuth, async (req, res) => {
       data: updateData,
     });
 
+    await bumpRoomActivity(updated.roomCode); // reset 3-day expiry window
     return res.json({ clip: updated });
   } catch (err) {
     console.error('[clips PUT]', err);
@@ -181,6 +193,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     await prisma.clip.delete({ where: { id } });
+    await bumpRoomActivity(clip.roomCode); // reset 3-day expiry window
     return res.json({ success: true });
   } catch (err) {
     console.error('[clips DELETE]', err);

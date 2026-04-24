@@ -237,15 +237,15 @@ nextApp.prepare().then(() => {
       });
       if (emptyRooms.count > 0) console.log(`[cron] Deleted ${emptyRooms.count} empty room(s)`);
 
-      // ── Non-empty rooms older than 3 days (skip SOLO_) ──
+      // ── Non-empty rooms inactive for 3 days (skip SOLO_) ──
       const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
       const oldRooms = await prisma.room.deleteMany({
         where: {
-          createdAt: { lt: threeDaysAgo },
+          lastActivityAt: { lt: threeDaysAgo },
           code: { not: { startsWith: 'SOLO_' } }
         }
       });
-      if (oldRooms.count > 0) console.log(`[cron] Deleted ${oldRooms.count} old room(s)`);
+      if (oldRooms.count > 0) console.log(`[cron] Deleted ${oldRooms.count} inactive room(s)`);
 
     } catch (err) {
       console.error('[cron] Cleanup error:', err.message);
