@@ -10,6 +10,17 @@ const router = express.Router();
 
 const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
 
+// Strip HTML tags to prevent stored XSS
+function sanitize(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/javascript:/gi, '')
+    .trim()
+    .slice(0, 50000); // max 50k chars per field
+}
+
 // GET /api/clips?roomCode=XXX  → get clips for a room
 router.get('/', optionalAuth, async (req, res) => {
   try {
@@ -87,9 +98,9 @@ router.post('/', optionalAuth, async (req, res) => {
         userId: req.user?.id || null,
         username: req.user?.username || 'Anonymous',
         type,
-        content: content || '',
-        comment: comment || null,
-        fileName: fileName || '',
+        content: sanitize(content || ''),
+        comment: comment ? sanitize(comment) : null,
+        fileName: fileName ? sanitize(fileName) : '',
         fileSize: fileSize || 0,
         fileKey: fileKey || '',
         mimeType: mimeType || '',
@@ -119,10 +130,10 @@ router.put('/:id', requireAuth, async (req, res) => {
     // So we only update content if it's text/link, but we can always update comment.
     const updateData = { editedAt: new Date() };
     if (content !== undefined && ['text', 'link'].includes(clip.type)) {
-      updateData.content = content;
+      updateData.content = sanitize(content);
     }
     if (comment !== undefined) {
-      updateData.comment = comment;
+      updateData.comment = sanitize(comment);
     }
 
     const updated = await prisma.clip.update({

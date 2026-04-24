@@ -6,6 +6,9 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const cron = require('node-cron');
+const helmet = require('helmet');
+const compression = require('compression');
+const { rateLimit } = require('express-rate-limit');
 
 const dev = process.env.NODE_ENV !== 'production';
 const nextApp = next({ dev });
@@ -25,12 +28,18 @@ const trackRouter = require('./api/track');
 nextApp.prepare().then(() => {
   const expressApp = express();
 
+  // ── Security headers (helmet) ──
+  expressApp.use(helmet({
+    contentSecurityPolicy: false, // Next.js handles its own CSP
+    crossOriginEmbedderPolicy: false,
+  }));
+
+  // ── Gzip compression ──
+  expressApp.use(compression());
+
   expressApp.use(cors({
     origin: function (origin, callback) {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      // Allow requests with no origin (like mobile apps or curl requests)
-      // Allow the main app URL
-      // Allow any Chrome Extension
       if (!origin || origin === appUrl || origin.startsWith('chrome-extension://')) {
         callback(null, true);
       } else {
@@ -42,7 +51,51 @@ nextApp.prepare().then(() => {
   expressApp.use(express.json({ limit: '10mb' }));
   expressApp.use(cookieParser());
 
+  // ── Rate Limiters ──
+  // Auth: 10 attempts per 15 minutes per IP
+  const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    message: { error: 'Too many attempts. Please try again in 15 minutes.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // OTP resend: 3 per hour per IP (prevent email spam)
+  const otpLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 3,
+    message: { error: 'Too many OTP requests. Please wait an hour.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // General API: 200 requests per minute per IP
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 200,
+    message: { error: 'Too many requests. Please slow down.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path.startsWith('/_next'), // skip Next.js static
+  });
+
+  // Tool tracking: 60 per minute per IP (prevent fake analytics)
+  const trackLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    message: { error: 'Too many track requests.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
   // Mount Express API routes
+  expressApp.use('/api/auth/login', authLimiter);
+  expressApp.use('/api/auth/register', authLimiter);
+  expressApp.use('/api/auth/resend-otp', otpLimiter);
+  expressApp.use('/api/track', trackLimiter);
+  expressApp.use('/api', generalLimiter);
+
   expressApp.use('/api/auth', authRouter);
   expressApp.use('/api/clips', clipsRouter);
   expressApp.use('/api/rooms', roomsRouter);
