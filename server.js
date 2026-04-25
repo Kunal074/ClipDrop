@@ -130,8 +130,9 @@ nextApp.prepare().then(() => {
     maxHttpBufferSize: 1e6,
   });
 
-  // Track online users per room
-  const roomUsers = {};
+  // Track online users per room — keyed by socket.id so duplicate usernames count correctly
+  // roomSockets[roomCode] = Map<socketId, username>
+  const roomSockets = {};
 
   io.on('connection', (socket) => {
     console.log('Socket connected:', socket.id);
@@ -141,12 +142,12 @@ nextApp.prepare().then(() => {
       socket.data.roomCode = roomCode;
       socket.data.username = username || 'Anonymous';
 
-      if (!roomUsers[roomCode]) roomUsers[roomCode] = new Set();
-      roomUsers[roomCode].add(socket.data.username);
+      if (!roomSockets[roomCode]) roomSockets[roomCode] = new Map();
+      roomSockets[roomCode].set(socket.id, socket.data.username);
 
       io.to(roomCode).emit('user-joined', {
         username: socket.data.username,
-        onlineCount: roomUsers[roomCode].size,
+        onlineCount: roomSockets[roomCode].size,
       });
     });
 
@@ -170,13 +171,15 @@ nextApp.prepare().then(() => {
 
     socket.on('disconnect', () => {
       const { roomCode, username } = socket.data;
-      if (roomCode && roomUsers[roomCode]) {
-        roomUsers[roomCode].delete(username);
-        if (roomUsers[roomCode].size === 0) delete roomUsers[roomCode];
-        else {
+      if (roomCode && roomSockets[roomCode]) {
+        roomSockets[roomCode].delete(socket.id);
+        const remaining = roomSockets[roomCode].size;
+        if (remaining === 0) {
+          delete roomSockets[roomCode];
+        } else {
           io.to(roomCode).emit('user-left', {
             username,
-            onlineCount: roomUsers[roomCode]?.size || 0,
+            onlineCount: remaining,
           });
         }
       }

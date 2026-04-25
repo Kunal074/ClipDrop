@@ -126,9 +126,15 @@ router.post('/finalize', requireAuth, async (req, res) => {
     });
     
     const fileData = await getFileRes.json();
-    // Use uc?export=view URL for direct embedding in <img> tags
+    // Use uc?export=view for images (embeds inline), webViewLink for everything else
+    // webViewLink opens Google Drive viewer in browser — no forced download
     const embedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
-    return res.json({ publicUrl: embedUrl, downloadUrl: fileData.webContentLink, viewUrl: fileData.webViewLink });
+    return res.json({
+      publicUrl: fileData.webViewLink || embedUrl,  // viewer link for all files
+      embedUrl,                                     // image embed URL (for <img> tags)
+      downloadUrl: fileData.webContentLink,
+      viewUrl: fileData.webViewLink,
+    });
   } catch (err) {
     console.error('[upload/finalize]', err);
     return res.status(500).json({ error: 'Failed to finalize Drive file' });

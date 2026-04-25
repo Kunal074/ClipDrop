@@ -102,8 +102,13 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
           throw new Error(`Finalize [${finalizeRes.status}]: ${finalizeText}`);
         }
         const finalized = await finalizeRes.json();
-        finalPublicUrl = finalized.publicUrl;
-        finalFileKey = fileId; // Store drive ID as key for later deletion
+        // Images: use embed URL so <img> renders inline
+        // Files: use webViewLink so clicking opens Drive preview, not a download
+        const isImg = file.type.startsWith('image/');
+        finalPublicUrl = isImg
+          ? (finalized.embedUrl || finalized.publicUrl)
+          : (finalized.viewUrl  || finalized.publicUrl);
+        finalFileKey = fileId;
       }
 
       setProgress(100);

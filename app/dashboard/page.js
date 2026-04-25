@@ -29,6 +29,7 @@ function DashboardContent() {
   const socketRef = useRef(null);
   const feedRef = useRef(null);
   const dropZoneRef = useRef(null);
+  const mobileImgRef = useRef(null); // hidden file input for mobile image pick
   // Stable ref to soloRoomCode so callbacks don't need it as a dep
   const soloRoomCodeRef = useRef('');
 
@@ -142,6 +143,40 @@ function DashboardContent() {
     window.addEventListener('paste', handlePaste);
     return () => window.removeEventListener('paste', handlePaste);
   }, []); // stable: only uses refs
+
+  // ─── Mobile image upload (gallery / camera picker) ───
+  const uploadImageFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    try {
+      const formData = new FormData();
+      formData.append('image', file, file.name || `photo_${Date.now()}.jpg`);
+      const res = await fetch('/api/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (res.status === 429) {
+        const d = await res.json();
+        toast.error(d.message || 'Image limit reached. Delete an image first.');
+        return;
+      }
+      if (!res.ok) throw new Error('Upload failed');
+      const { url, key } = await res.json();
+      await sendClipRef.current?.({
+        type: 'image',
+        content: url,
+        fileName: file.name || `photo_${Date.now()}.jpg`,
+        fileSize: file.size,
+        fileKey: key,
+        mimeType: file.type,
+        isLargeFile: false,
+      });
+      toast.success('Image uploaded!');
+    } catch (err) {
+      console.error('[mobile img upload]', err);
+      toast.error('Image upload failed. Try again.');
+    }
+  };
 
   // ─── Send clip ───
   const sendClip = useCallback(async (clipData) => {
@@ -363,7 +398,7 @@ function DashboardContent() {
               <textarea
                 className="form-input"
                 rows={4}
-                placeholder="Type or press Ctrl+V anywhere..."
+                placeholder="Type or press Ctrl+V to paste (desktop)..."
                 value={textInput}
                 onChange={e => setTextInput(e.target.value)}
                 style={{ resize: 'vertical', minHeight: 80, marginBottom: 10 }}
@@ -387,6 +422,27 @@ function DashboardContent() {
           </div>
 
           <p className="room-sidebar__title" style={{ marginTop: '1.5rem' }}>Drop File or Paste Image</p>
+
+          {/* Hidden file input for mobile gallery/camera */}
+          <input
+            ref={mobileImgRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) uploadImageFile(file);
+              e.target.value = ''; // reset so same file can be picked again
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => mobileImgRef.current?.click()}
+            className="btn btn-secondary btn-full"
+            style={{ marginBottom: 10 }}
+          >
+            📷 Upload Image from Gallery
+          </button>
           <input
             type="text"
             className="form-input"
