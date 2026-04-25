@@ -49,9 +49,35 @@ async function convertWithLibreOffice(buffer, inputExt) {
 
   fs.writeFileSync(inputFile, buffer);
 
-  execSync(`${sofficePath} --headless --convert-to pdf --outdir "${tmpDir}" "${inputFile}"`, {
-    timeout: 60000,
-  });
+  // Build PDF export filter options for max quality
+  const pdfFilterOptions = [
+    'EmbedStandardFonts=true',        // embed all fonts so they don't go missing
+    'EmbedOnlyUsedFonts=false',        // embed all, not just used subset
+    'ExportBookmarks=true',            // keep Word headings as PDF bookmarks
+    'ExportBookmarksToPDFDestination=true',
+    'UseTaggedPDF=true',               // accessible/searchable PDF
+    'SelectPdfVersion=1',              // PDF 1.5 — good balance of compat & features
+    'ReduceImageResolution=false',     // don't downscale images
+    'IsSkipEmptyPages=false',
+    'ExportLinksRelativeFsys=false',
+    'PDFViewSelection=0',
+  ].join(';');
+
+  execSync(
+    `${sofficePath} --headless --norestore --nofirststartwizard ` +
+    `"--infilter=writer_pdf_Export" ` +
+    `"--convert-to" "pdf:writer_pdf_Export:${pdfFilterOptions}" ` +
+    `--outdir "${tmpDir}" "${inputFile}"`,
+    { timeout: 120000, env: { ...process.env, HOME: tmpDir } } // HOME prevents profile lock issues
+  );
+
+  if (!fs.existsSync(outputFile)) {
+    // Fallback: basic conversion without filter options (some LO versions don't support --infilter)
+    execSync(
+      `${sofficePath} --headless --norestore --convert-to pdf --outdir "${tmpDir}" "${inputFile}"`,
+      { timeout: 120000, env: { ...process.env, HOME: tmpDir } }
+    );
+  }
 
   const pdfBuffer = fs.readFileSync(outputFile);
   fs.rmSync(tmpDir, { recursive: true, force: true });

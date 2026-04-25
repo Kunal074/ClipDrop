@@ -53,20 +53,60 @@ export function ToolWorkspaceContent({ title, description, accept, multiple = fa
         </div>
 
         {resultFile ? (
-          <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-            <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎉</div>
-            <h2 style={{ marginBottom: '1rem' }}>Processing Complete!</h2>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <a
-                href={resultFile.url}
-                download={resultFile.name}
-                className="btn btn-primary"
-              >
-                📥 Download File
-              </a>
-              <button onClick={() => { setFiles([]); onReset(); }} className="btn btn-secondary">
-                Process Another
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* ── Preview Panel ── */}
+            {(() => {
+              const name = (resultFile.name || '').toLowerCase();
+              const isPdf = name.endsWith('.pdf');
+              const isSvg = name.endsWith('.svg');
+              const isImg = /\.(png|jpg|jpeg|webp|gif|bmp)$/.test(name);
+
+              if (isPdf) return (
+                <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-3)' }}>
+                    📄 <span>PDF Preview</span>
+                    <span style={{ marginLeft: 'auto', fontSize: '0.78rem' }}>Scroll to navigate pages</span>
+                  </div>
+                  <iframe
+                    src={resultFile.url + '#toolbar=1&view=FitH'}
+                    style={{ width: '100%', height: 520, border: 'none', display: 'block', background: '#fff' }}
+                    title="PDF Preview"
+                  />
+                </div>
+              );
+
+              if (isImg || isSvg) return (
+                <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+                  <div style={{ padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-3)' }}>
+                    🖼️ Preview
+                  </div>
+                  <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'center', background: 'repeating-conic-gradient(#1a1a2e 0% 25%, #12122a 0% 50%) 0 0/20px 20px' }}>
+                    <img
+                      src={resultFile.url}
+                      alt="Preview"
+                      style={{ maxWidth: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 8, boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
+                    />
+                  </div>
+                </div>
+              );
+
+              return null; // no preview for unknown types
+            })()}
+
+            {/* ── Action Buttons ── */}
+            <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <a
+                  href={resultFile.url}
+                  download={resultFile.name}
+                  className="btn btn-primary"
+                >
+                  📥 Download {resultFile.name}
+                </a>
+                <button onClick={() => { setFiles([]); onReset(); }} className="btn btn-secondary">
+                  ↩ Process Another
+                </button>
+              </div>
             </div>
           </div>
         ) : files.length === 0 ? (
