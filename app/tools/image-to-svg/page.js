@@ -34,7 +34,7 @@ export default function ImageToSvgPage() {
       
       setResultFile({
         url,
-        name: `traced_${Date.now()}.svg`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}_traced.svg`
       });
       toast.success('Image traced to SVG successfully!');
     } catch (err) {

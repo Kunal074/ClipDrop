@@ -29,7 +29,7 @@ export default function PngToPdfPage() {
       
       setResultFile({
         url,
-        name: `converted_${Date.now()}.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}.pdf`
       });
       toast.success('PNG converted to PDF successfully!');
     } catch (err) {

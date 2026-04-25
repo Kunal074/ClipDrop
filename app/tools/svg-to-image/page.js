@@ -54,7 +54,7 @@ export default function SvgToImagePage() {
       
       setResultFile({
         url: dataUrl,
-        name: `converted_${Date.now()}.${format === 'image/jpeg' ? 'jpg' : 'png'}`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}_converted.${format === 'image/jpeg' ? 'jpg' : 'png'}`
       });
       toast.success('SVG converted successfully!');
     } catch (err) {

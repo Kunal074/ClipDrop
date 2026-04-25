@@ -29,7 +29,7 @@ export default function JpgToPdfPage() {
       
       setResultFile({
         url,
-        name: `converted_${Date.now()}.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}.pdf`
       });
       toast.success('JPG converted to PDF successfully!');
     } catch (err) {

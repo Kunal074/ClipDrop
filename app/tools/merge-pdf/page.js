@@ -35,7 +35,7 @@ export default function MergePdfPage() {
       
       setResultFile({
         url,
-        name: `merged_${Date.now()}.pdf`
+        name: `merged_document.pdf`
       });
       toast.success('PDFs merged successfully!');
     } catch (err) {

@@ -54,7 +54,7 @@ export default function ResizeImagePage() {
       
       setResultFile({
         url: dataUrl,
-        name: `resized_${Date.now()}.${format === 'image/png' ? 'png' : 'jpg'}`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}_resized.${format === 'image/png' ? 'png' : 'jpg'}`
       });
       toast.success('Image resized successfully!');
     } catch (err) {

@@ -38,7 +38,7 @@ export default function CompressImagePage() {
       
       setResultFile({
         url: dataUrl,
-        name: `compressed_${Date.now()}.${format === 'image/webp' ? 'webp' : 'jpg'}`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}_compressed.${format === 'image/webp' ? 'webp' : 'jpg'}`
       });
       toast.success('Image compressed successfully!');
     } catch (err) {
