@@ -58,7 +58,7 @@ export default function SplitPdfPage() {
       
       setResultFile({
         url,
-        name: `${file.name.replace(/\.[^/.]+$/, '')}_split.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, '')}.pdf`
       });
       toast.success('PDF split successfully!');
     } catch (err) {

@@ -42,7 +42,7 @@ export default function AddWatermarkPage() {
       
       setResultFile({
         url,
-        name: `${file.name.replace(/\.[^/.]+$/, "")}_watermarked.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, "")}.pdf`
       });
       toast.success('Watermark added successfully!');
     } catch (err) {

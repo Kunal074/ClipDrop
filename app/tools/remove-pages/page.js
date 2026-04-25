@@ -55,7 +55,7 @@ export default function RemovePagesPage() {
       const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       
-      setResultFile({ url, name: `${file.name.replace(/\.[^/.]+$/, '')}_cleaned.pdf` });
+      setResultFile({ url, name: `${file.name.replace(/\.[^/.]+$/, '')}.pdf` });
       toast.success('Pages removed successfully!');
     } catch (err) {
       console.error(err);

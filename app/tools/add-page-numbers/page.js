@@ -40,7 +40,7 @@ export default function AddPageNumbersPage() {
       
       setResultFile({
         url,
-        name: `${file.name.replace(/\.[^/.]+$/, "")}_numbered.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, "")}.pdf`
       });
       toast.success('Page numbers added successfully!');
     } catch (err) {

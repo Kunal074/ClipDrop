@@ -28,7 +28,7 @@ export default function OfficeToPdfPage({ title, description, accept }) {
       
       setResultFile({
         url,
-        name: `${file.name.replace(/\.[^/.]+$/, "")}_converted.pdf`
+        name: `${file.name.replace(/\.[^/.]+$/, "")}.pdf`
       });
       toast.success('Document converted to PDF successfully!');
     } catch (err) {

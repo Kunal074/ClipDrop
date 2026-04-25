@@ -25,7 +25,7 @@ export default function RotatePdfPage() {
       const blob = new Blob([newPdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       
-      setResultFile({ url, name: `${file.name.replace(/\.[^/.]+$/, '')}_rotated.pdf` });
+      setResultFile({ url, name: `${file.name.replace(/\.[^/.]+$/, '')}.pdf` });
       toast.success('PDF rotated successfully!');
     } catch (err) {
       console.error(err);
