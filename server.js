@@ -210,7 +210,7 @@ nextApp.prepare().then(() => {
 
       for (const clip of expired) {
         if (clip.fileKey) {
-          if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
+          if (clip.fileKey.startsWith('clipdrop/')) {
             try { await cloudinary.uploader.destroy(clip.fileKey); }
             catch (e) { console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message); }
           } else if (clip.user?.googleRefreshToken) {

@@ -162,14 +162,16 @@ function DashboardContent() {
       }
       if (!res.ok) throw new Error('Upload failed');
       const { url, key } = await res.json();
+      const isImage = file.type.startsWith('image/');
+      const isLargeFile = file.size > 10 * 1024 * 1024; // > 10MB
       await sendClipRef.current?.({
-        type: 'image',
+        type: isImage ? 'image' : 'file',
         content: url,
-        fileName: file.name || `photo_${Date.now()}.jpg`,
+        fileName: file.name || (isImage ? `photo_${Date.now()}.jpg` : `file_${Date.now()}`),
         fileSize: file.size,
         fileKey: key,
         mimeType: file.type,
-        isLargeFile: false,
+        isLargeFile: isLargeFile,
       });
       toast.success('Image uploaded!');
     } catch (err) {
@@ -427,7 +429,7 @@ function DashboardContent() {
           <input
             ref={mobileImgRef}
             type="file"
-            accept="image/*"
+            accept="*/*"
             style={{ display: 'none' }}
             onChange={e => {
               const file = e.target.files?.[0];
@@ -441,7 +443,7 @@ function DashboardContent() {
             className="btn btn-secondary btn-full"
             style={{ marginBottom: 10 }}
           >
-            📷 Upload Image from Gallery
+            📁 Upload File / Image (Gallery)
           </button>
           <input
             type="text"

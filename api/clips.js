@@ -98,9 +98,16 @@ router.post('/', optionalAuth, async (req, res) => {
     const room = await prisma.room.findUnique({ where: { code: roomCode } });
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
+    const username = (req.user?.username || '').toLowerCase();
+    const OWNER_USERNAME = (process.env.OWNER_USERNAME || '').toLowerCase();
+    const isOwner = OWNER_USERNAME && username === OWNER_USERNAME;
+
     const isLargeFile = (fileSize || 0) > LARGE_FILE_THRESHOLD;
-    // ALL clips expire in 30 minutes — pin to make Important (no expiry)
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    
+    // Large files (temporary cloudinary workaround) expire in 5 minutes for normal users
+    // Admins and small files get 30 minutes — pin to make Important (no expiry)
+    const expiresMinutes = (isLargeFile && !isOwner) ? 5 : 30;
+    const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
 
     const clip = await prisma.clip.create({
       data: {

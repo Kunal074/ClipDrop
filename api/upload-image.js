@@ -20,22 +20,18 @@ cloudinary.config({
 // Memory storage — buffer sent directly to Cloudinary, never touches disk
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('Only images allowed'));
-  },
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB Cloudinary limit
 });
 
 // Helper: upload buffer to Cloudinary
-function uploadToCloudinary(buffer) {
+function uploadToCloudinary(buffer, filename) {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: 'clipdrop/paste-images',
-        resource_type: 'image',
-        quality: 'auto',
-        fetch_format: 'auto',
+        resource_type: 'auto',
+        // 'auto' quality/fetch_format only works for images, so don't force them for raw files
+        public_id: filename ? filename.replace(/\.[^/.]+$/, "") : undefined
       },
       (err, result) => {
         if (err) return reject(err);
@@ -46,20 +42,20 @@ function uploadToCloudinary(buffer) {
   });
 }
 
-// POST /api/upload-image — upload pasted image to Cloudinary, return URL + public_id
+// POST /api/upload-image — upload pasted file to Cloudinary, return URL + public_id
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'No image provided' });
+    if (!req.file) return res.status(400).json({ error: 'No file provided' });
 
     const username = (req.user?.username || '').toLowerCase();
     const isOwner = OWNER_USERNAME && username === OWNER_USERNAME;
 
-    // Enforce image limit for non-owners
+    // Enforce limit for non-owners (Cloudinary files & images)
     if (!isOwner) {
-      const imageCount = await prisma.clip.count({
+      const cloudinaryCount = await prisma.clip.count({
         where: {
           userId: req.user.id,
-          type: 'image',
+          fileKey: { startsWith: 'clipdrop/' },
           // Only count non-expired ones
           OR: [
             { expiresAt: null },
@@ -68,17 +64,17 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
         },
       });
 
-      if (imageCount >= IMAGE_LIMIT) {
+      if (cloudinaryCount >= IMAGE_LIMIT) {
         return res.status(429).json({
-          error: `Image limit reached`,
-          message: `You can only keep ${IMAGE_LIMIT} pasted images at a time. Please delete one before adding more.`,
-          count: imageCount,
+          error: `File limit reached`,
+          message: `You can only keep ${IMAGE_LIMIT} uploaded files/images at a time. Please delete one before adding more.`,
+          count: cloudinaryCount,
           limit: IMAGE_LIMIT,
         });
       }
     }
 
-    const result = await uploadToCloudinary(req.file.buffer);
+    const result = await uploadToCloudinary(req.file.buffer, req.file.originalname);
 
     return res.json({
       url: result.secure_url,   // HTTPS CDN URL stored in clip.content
@@ -86,7 +82,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     });
   } catch (err) {
     console.error('[upload-image cloudinary]', err);
-    return res.status(500).json({ error: 'Image upload failed' });
+    return res.status(500).json({ error: 'File upload failed' });
   }
 });
 
