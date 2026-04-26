@@ -14,8 +14,8 @@ function generateRoomCode(length = 6) {
   return code;
 }
 
-// POST /api/rooms  → create a room (auth required)
-router.post('/', requireAuth, async (req, res) => {
+// POST /api/rooms  → create a room (auth required or guest)
+router.post('/', optionalAuth, async (req, res) => {
   try {
     const { name } = req.body;
 
@@ -27,11 +27,31 @@ router.post('/', requireAuth, async (req, res) => {
       if (attempts > 10) return res.status(500).json({ error: 'Could not generate unique room code' });
     } while (await prisma.room.findUnique({ where: { code } }));
 
+    let ownerId = req.user?.id;
+    if (!ownerId) {
+      // Find or create the guest system user
+      const guestEmail = 'guest_system@clipdrop.local';
+      let guestUser = await prisma.user.findUnique({ where: { email: guestEmail } });
+      if (!guestUser) {
+        // Create the guest system user with dummy credentials
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash(Math.random().toString(), 10);
+        guestUser = await prisma.user.create({
+          data: {
+            email: guestEmail,
+            username: 'guest_system',
+            password: hashedPassword,
+          }
+        });
+      }
+      ownerId = guestUser.id;
+    }
+
     const room = await prisma.room.create({
       data: {
         code,
         name: name || null,
-        ownerId: req.user.id,
+        ownerId,
       },
     });
 

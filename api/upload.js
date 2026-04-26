@@ -1,7 +1,7 @@
 const express = require('express');
 const { google } = require('googleapis');
 const prisma = require('../lib/prisma');
-const { requireAuth } = require('../lib/auth');
+const { requireAuth, optionalAuth } = require('../lib/auth');
 
 const router = express.Router();
 
@@ -43,7 +43,7 @@ async function getValidAccessToken(user) {
 }
 
 // POST /api/upload/presign  → get a Google Drive Resumable upload URL
-router.post('/presign', requireAuth, async (req, res) => {
+router.post('/presign', optionalAuth, async (req, res) => {
   try {
     const { fileName, fileSize, contentType } = req.body;
 
@@ -63,7 +63,11 @@ router.post('/presign', requireAuth, async (req, res) => {
 
     // Per-user limits: max 10 files AND max 4 GB total storage (admins bypass this)
     if (!isAdmin) {
-      const userFiles = await prisma.clip.findMany({
+      if (!req.user) {
+        // Guests bypass total limit since their files auto-delete on room exit,
+        // but they are bound by the per-file size limits handled above.
+      } else {
+        const userFiles = await prisma.clip.findMany({
         where: {
           userId: req.user.id,
           isLargeFile: true,
@@ -91,6 +95,7 @@ router.post('/presign', requireAuth, async (req, res) => {
           error: 'Storage limit reached',
           message: `You have used ${usedGB} GB of your 4 GB storage limit. Please delete some files first.`,
         });
+      }
       }
     }
 
@@ -149,7 +154,7 @@ router.post('/presign', requireAuth, async (req, res) => {
 });
 
 // POST /api/upload/finalize  → make file public after upload
-router.post('/finalize', requireAuth, async (req, res) => {
+router.post('/finalize', optionalAuth, async (req, res) => {
   try {
     const { fileId } = req.body;
     const adminUser = await prisma.user.findUnique({ where: { email: 'kunalsahu232777@gmail.com' } });

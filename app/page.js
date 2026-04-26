@@ -15,13 +15,15 @@ function HomeContent() {
   const [creating, setCreating] = useState(false);
 
   const createRoom = async () => {
-    if (!user) { router.push('/login'); return; }
     setCreating(true);
     try {
       const token = localStorage.getItem('clipdrop_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
       const res = await fetch('/api/rooms', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers,
         body: JSON.stringify({}),
       });
       const data = await res.json();
@@ -58,7 +60,7 @@ function HomeContent() {
             No account needed to join rooms — just paste, share, and it disappears.
           </p>
           <p style={{ fontSize: '0.95rem', color: 'var(--text-3)', marginTop: '-0.5rem' }}>
-            Plus 15+ free PDF &amp; image tools. Connect Google Drive for 1GB file uploads.
+            Plus 15+ free PDF &amp; image tools. Free Drive for 1GB file uploads.
           </p>
 
           <div className="hero-actions">

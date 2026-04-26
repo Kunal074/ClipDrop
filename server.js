@@ -125,6 +125,50 @@ nextApp.prepare().then(() => {
   // Track online users per room — keyed by socket.id so duplicate usernames count correctly
   // roomSockets[roomCode] = Map<socketId, username>
   const roomSockets = {};
+  const guestRoomTimeouts = new Map();
+
+  async function checkAndCleanupGuestRoom(roomCode, isInstant) {
+    const prisma = require('./lib/prisma');
+    if (!isInstant) {
+      if (guestRoomTimeouts.has(roomCode)) return;
+      const timeoutId = setTimeout(async () => {
+        guestRoomTimeouts.delete(roomCode);
+        const remaining = roomSockets[roomCode]?.size || 0;
+        if (remaining === 0) await executeGuestCleanup(roomCode, prisma);
+      }, 3 * 60 * 1000); // 3 minutes
+      guestRoomTimeouts.set(roomCode, timeoutId);
+    } else {
+      if (guestRoomTimeouts.has(roomCode)) {
+        clearTimeout(guestRoomTimeouts.get(roomCode));
+        guestRoomTimeouts.delete(roomCode);
+      }
+      await executeGuestCleanup(roomCode, prisma);
+    }
+  }
+
+  async function executeGuestCleanup(roomCode, prisma) {
+    try {
+      const room = await prisma.room.findUnique({ where: { code: roomCode }, include: { owner: true } });
+      if (room && room.owner.email === 'guest_system@clipdrop.local') {
+        const clips = await prisma.clip.findMany({ where: { roomCode, fileKey: { not: '' } } });
+        for (const clip of clips) {
+          if (clip.fileKey.startsWith('clipdrop/')) {
+            const cloudinary = require('cloudinary').v2;
+            try { await cloudinary.uploader.destroy(clip.fileKey); } catch (e) { }
+          } else {
+            await prisma.clip.update({
+              where: { id: clip.id },
+              data: { expiresAt: new Date(Date.now() - 1000) } // instantly expired for cron
+            });
+          }
+        }
+        await prisma.room.delete({ where: { code: roomCode } });
+        console.log(`[Guest Room] Auto-deleted empty guest room: ${roomCode}`);
+      }
+    } catch (e) {
+      console.error(`[Guest Room] Cleanup failed for ${roomCode}:`, e.message);
+    }
+  }
 
   io.on('connection', (socket) => {
     console.log('Socket connected:', socket.id);
@@ -136,6 +180,11 @@ nextApp.prepare().then(() => {
 
       if (!roomSockets[roomCode]) roomSockets[roomCode] = new Map();
       roomSockets[roomCode].set(socket.id, socket.data.username);
+
+      if (guestRoomTimeouts.has(roomCode)) {
+        clearTimeout(guestRoomTimeouts.get(roomCode));
+        guestRoomTimeouts.delete(roomCode);
+      }
 
       io.to(roomCode).emit('user-joined', {
         username: socket.data.username,
@@ -161,6 +210,18 @@ nextApp.prepare().then(() => {
       socket.to(roomCode).emit('user-typing', { username });
     });
 
+    socket.on('explicitLeave', async (roomCode) => {
+      if (roomCode && roomSockets[roomCode]) {
+        roomSockets[roomCode].delete(socket.id);
+        const remaining = roomSockets[roomCode].size;
+        socket.leave(roomCode);
+        if (remaining === 0) {
+          delete roomSockets[roomCode];
+          await checkAndCleanupGuestRoom(roomCode, true);
+        }
+      }
+    });
+
     socket.on('disconnect', () => {
       const { roomCode, username } = socket.data;
       if (roomCode && roomSockets[roomCode]) {
@@ -168,6 +229,7 @@ nextApp.prepare().then(() => {
         const remaining = roomSockets[roomCode].size;
         if (remaining === 0) {
           delete roomSockets[roomCode];
+          checkAndCleanupGuestRoom(roomCode, false);
         } else {
           io.to(roomCode).emit('user-left', {
             username,

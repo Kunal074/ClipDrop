@@ -250,7 +250,10 @@ function RoomContent() {
             <span className="online-dot" />
             {onlineCount} online
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => router.push('/')} id="btn-leave-room">
+          <button className="btn btn-ghost btn-sm" onClick={() => {
+            if (socket) socket.emit('explicitLeave', roomCode);
+            router.push('/');
+          }} id="btn-leave-room">
             ← Leave
           </button>
         </div>
