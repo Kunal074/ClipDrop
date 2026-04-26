@@ -343,28 +343,12 @@ router.get('/:id/download', async (req, res) => {
       });
 
       if (newCount >= clip.maxDownloads) {
-        // Trigger asynchronous deletion
-        setImmediate(async () => {
-          try {
-            if (clip.fileKey) {
-              const { deleteDriveFile } = require('../lib/googleDrive');
-              const { deleteFromCloudinary } = require('../lib/cloudinary');
-              const { deleteFromR2 } = require('../lib/storage');
-
-              if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
-                await deleteFromCloudinary(clip.fileKey);
-              } else if (clip.isLargeFile || (!clip.fileKey.startsWith('clipdrop/') && !clip.fileKey.includes('r2.cloudflarestorage'))) {
-                await deleteDriveFile(clip.fileKey);
-              } else {
-                await deleteFromR2(clip.fileKey).catch(() => {});
-              }
-            }
-            await prisma.clip.delete({ where: { id } });
-            console.log(`[clips/download] Auto-deleted clip ${id} after ${newCount} downloads`);
-          } catch (e) {
-            console.error(`[clips/download] Auto-delete failed for ${id}:`, e.message);
-          }
-        });
+        // We do NOT delete the file from Google Drive immediately, otherwise the user's 
+        // download will fail with "File not found" before it even starts!
+        // The clip's downloadCount is now >= maxDownloads, so it will be hidden from the UI
+        // and future download attempts will be rejected.
+        // The 1-hour cron job will cleanly delete the file from Google Drive later.
+        console.log(`[clips/download] Limit reached for ${id}. Hidden from UI, pending cron deletion.`);
       }
     }
 
