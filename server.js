@@ -208,19 +208,32 @@ nextApp.prepare().then(() => {
         include: { user: true }
       });
 
+      // Fetch Master Admin token for Google Drive deletions
+      let adminAccessToken = null;
+      if (expired.some(c => c.fileKey && !c.fileKey.startsWith('clipdrop/'))) {
+        const adminUser = await prisma.user.findUnique({ where: { email: 'kunalsahu232777@gmail.com' } });
+        if (adminUser?.googleRefreshToken) {
+          try {
+            const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+            oauth2Client.setCredentials({ refresh_token: adminUser.googleRefreshToken });
+            const { credentials } = await oauth2Client.refreshAccessToken();
+            adminAccessToken = credentials.access_token;
+          } catch (err) {
+            console.error('[cron] Failed to refresh Master Admin token:', err.message);
+          }
+        }
+      }
+
       for (const clip of expired) {
         if (clip.fileKey) {
           if (clip.fileKey.startsWith('clipdrop/')) {
             try { await cloudinary.uploader.destroy(clip.fileKey); }
             catch (e) { console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message); }
-          } else if (clip.user?.googleRefreshToken) {
+          } else if (adminAccessToken) {
             try {
-              const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
-              oauth2Client.setCredentials({ refresh_token: clip.user.googleRefreshToken });
-              const { credentials } = await oauth2Client.refreshAccessToken();
               await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
                 method: 'DELETE',
-                headers: { Authorization: `Bearer ${credentials.access_token}` }
+                headers: { Authorization: `Bearer ${adminAccessToken}` }
               });
             } catch (driveErr) { console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message); }
           }

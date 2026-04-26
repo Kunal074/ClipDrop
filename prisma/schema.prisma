@@ -20,6 +20,7 @@ model User {
   emailVerified      Boolean   @default(false)
   otp                String?
   otpExpiry          DateTime?
+  trustedDevices     String[]  @default([])
   clips              Clip[]
   rooms              Room[]
 }

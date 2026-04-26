@@ -5,6 +5,9 @@ const { signToken, requireAuth } = require('../lib/auth');
 const { sendOtpEmail } = require('../lib/mailer');
 
 const router = express.Router();
+const crypto = require('crypto');
+
+const ADMIN_EMAILS = ['kunalsahu232777@gmail.com', 'clipdrop79@gmail.com'];
 
 // ── OTP helpers ───────────────────────────────────────────────
 function generateOtp() {
@@ -181,6 +184,23 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Admin Device Verification
+    if (ADMIN_EMAILS.includes(user.email.toLowerCase())) {
+      const deviceId = req.cookies.clipdrop_device_id;
+      if (!deviceId || !user.trustedDevices.includes(deviceId)) {
+        const otp = generateOtp();
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+        await prisma.user.update({ where: { id: user.id }, data: { otp, otpExpiry } });
+        await sendOtpEmail(user.email, otp, user.username);
+        
+        return res.status(403).json({
+          error: 'New device detected. Please verify your identity with OTP sent to email.',
+          requiresDeviceVerification: true,
+          email: user.email,
+        });
+      }
+    }
+
     const token = signToken({ id: user.id, username: user.username, email: user.email });
 
     res.cookie('clipdrop_token', token, {
@@ -277,6 +297,85 @@ router.get('/google/callback', async (req, res) => {
   } catch (error) {
     console.error('[auth/google/callback]', error);
     return res.redirect('/dashboard?error=google_auth_failed');
+  }
+});
+// POST /api/auth/verify-device-otp
+router.post('/verify-device-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP are required' });
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user || !user.otp || user.otp !== otp) return res.status(400).json({ error: 'Invalid OTP' });
+    if (!user.otpExpiry || new Date() > user.otpExpiry) return res.status(400).json({ error: 'OTP has expired' });
+
+    const deviceId = crypto.randomUUID();
+    const verified = await prisma.user.update({
+      where: { id: user.id },
+      data: { otp: null, otpExpiry: null, trustedDevices: { push: deviceId } },
+    });
+
+    const token = signToken({ id: verified.id, username: verified.username, email: verified.email });
+
+    res.cookie('clipdrop_token', token, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    
+    res.cookie('clipdrop_device_id', deviceId, {
+      httpOnly: true, secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax', maxAge: 365 * 24 * 60 * 60 * 1000, // 1 year
+    });
+
+    return res.json({ token, user: { id: verified.id, username: verified.username, email: verified.email } });
+  } catch (err) {
+    console.error('[auth/verify-device-otp]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user) return res.status(404).json({ error: 'No account found with this email' });
+
+    const otp = generateOtp();
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await prisma.user.update({ where: { id: user.id }, data: { otp, otpExpiry } });
+    await sendOtpEmail(user.email, otp, user.username);
+
+    return res.json({ success: true, message: 'OTP sent to your email.' });
+  } catch (err) {
+    console.error('[auth/forgot-password]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// POST /api/auth/reset-password
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) return res.status(400).json({ error: 'Missing fields' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (!user || !user.otp || user.otp !== otp) return res.status(400).json({ error: 'Invalid OTP' });
+    if (!user.otpExpiry || new Date() > user.otpExpiry) return res.status(400).json({ error: 'OTP has expired' });
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashed, otp: null, otpExpiry: null },
+    });
+
+    return res.json({ success: true, message: 'Password reset successful. Please log in.' });
+  } catch (err) {
+    console.error('[auth/reset-password]', err);
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 

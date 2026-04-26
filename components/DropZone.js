@@ -1,24 +1,26 @@
 'use client';
 import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
+import { useAuth } from '@/components/AuthProvider';
 
 const MAX_SIZE = 1024 * 1024 * 1024; // 1 GB
+const ADMIN_EMAILS = ['kunalsahu232777@gmail.com', 'clipdrop79@gmail.com'];
 
 const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
+  const { user } = useAuth();
+  const isAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
-  const [requireGoogle, setRequireGoogle] = useState(false);
   const fileInputRef = useRef(null);
 
   const uploadFile = useCallback(async (file) => {
-    if (file.size > MAX_SIZE) {
+    if (file.size > MAX_SIZE && !isAdmin) {
       setError('File too large. Maximum is 1 GB.');
       return;
     }
 
     setError('');
-    setRequireGoogle(false);
     setUploading(true);
     setProgress(0);
 
@@ -43,11 +45,6 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
         console.error('[DropZone] Presign failed:', presignRes.status, rawText);
         let err;
         try { err = JSON.parse(rawText); } catch { err = { error: rawText }; }
-        if (err.requireGoogleAuth) {
-           setRequireGoogle(true);
-           setUploading(false);
-           return;
-        }
         throw new Error(`[${presignRes.status}] ${err.error || rawText}`);
       }
 
@@ -170,7 +167,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
-      onClick={() => !uploading && !requireGoogle && fileInputRef.current?.click()}
+      onClick={() => !uploading && fileInputRef.current?.click()}
       role="button"
       tabIndex={0}
       id="dropzone"
@@ -184,40 +181,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
         id="file-input"
       />
 
-      {requireGoogle ? (
-        <div className="dropzone__google-connect" style={{ textAlign: 'center', padding: '1rem' }}>
-          <p className="dropzone__label" style={{ marginBottom: '1rem' }}>
-            Large files are stored securely in your personal Google Drive.
-          </p>
-          <button 
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.location.href = `/api/auth/google/connect?token=${encodeURIComponent(localStorage.getItem('clipdrop_token') || '')}`;
-            }} 
-            style={{
-              display: 'inline-block',
-              padding: '10px 20px',
-              backgroundColor: '#fff',
-              color: '#000',
-              border: 'none',
-              cursor: 'pointer',
-              borderRadius: '8px',
-              fontWeight: '600',
-              fontSize: '1rem'
-            }}
-          >
-            Connect Google Drive
-          </button>
-          <p 
-            className="dropzone__sublabel" 
-            style={{ marginTop: '1rem', cursor: 'pointer' }} 
-            onClick={(e) => { e.stopPropagation(); setRequireGoogle(false); }}
-          >
-            Cancel
-          </p>
-        </div>
-      ) : uploading ? (
+      {uploading ? (
         <div className="dropzone__progress">
           <div className="progress-bar">
             <div className="progress-bar__fill" style={{ width: `${progress}%` }} />
@@ -230,7 +194,9 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
           <p className="dropzone__label">
             {dragging ? 'Drop to upload' : 'Drop a file or click to browse'}
           </p>
-          <p className="dropzone__sublabel">Up to 1 GB · Stored in Google Drive</p>
+          <p className="dropzone__sublabel">
+            {isAdmin ? '♾️ Unlimited Size · Admin Mode' : 'Up to 1 GB · Securely Stored in Cloud'}
+          </p>
         </>
       )}
 

@@ -50,16 +50,20 @@ router.post('/presign', requireAuth, async (req, res) => {
     if (!fileName || !fileSize || !contentType) {
       return res.status(400).json({ error: 'fileName, fileSize, and contentType are required' });
     }
-    if (fileSize > MAX_FILE_SIZE) {
+    const ADMIN_EMAILS = ['kunalsahu232777@gmail.com', 'clipdrop79@gmail.com'];
+    const isAdmin = req.user?.email && ADMIN_EMAILS.includes(req.user.email.toLowerCase());
+
+    if (fileSize > MAX_FILE_SIZE && !isAdmin) {
       return res.status(413).json({ error: 'File too large. Maximum size is 1 GB.' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || !user.googleAccessToken) {
-      return res.status(403).json({ error: 'Google Account not linked. Please connect Google Drive to upload files.', requireGoogleAuth: true });
+    // Fetch the Master Admin user to use their Google Drive storage
+    const adminUser = await prisma.user.findUnique({ where: { email: 'kunalsahu232777@gmail.com' } });
+    if (!adminUser || !adminUser.googleAccessToken) {
+      return res.status(500).json({ error: 'Master Google Drive not configured by admin. Please contact support.', requireGoogleAuth: false });
     }
 
-    const accessToken = await getValidAccessToken(user);
+    const accessToken = await getValidAccessToken(adminUser);
 
     const metadata = { name: fileName, mimeType: contentType };
 
@@ -108,10 +112,10 @@ router.post('/presign', requireAuth, async (req, res) => {
 router.post('/finalize', requireAuth, async (req, res) => {
   try {
     const { fileId } = req.body;
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (!user || !user.googleAccessToken) return res.status(403).json({ error: 'Unauthorized' });
+    const adminUser = await prisma.user.findUnique({ where: { email: 'kunalsahu232777@gmail.com' } });
+    if (!adminUser || !adminUser.googleAccessToken) return res.status(500).json({ error: 'Master Google Drive not configured' });
 
-    const accessToken = await getValidAccessToken(user);
+    const accessToken = await getValidAccessToken(adminUser);
 
     // Set permissions to anyone with link
     await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
