@@ -389,9 +389,25 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
               <span className="clip-file__icon">📦</span>
               <div className="clip-file__info">
                 <p className="clip-file__name">{clip.fileName}</p>
-                <p className="clip-file__size">{(clip.fileSize / 1024 / 1024).toFixed(2)} MB</p>
+                <p className="clip-file__size">
+                  {(clip.fileSize / 1024 / 1024).toFixed(2)} MB
+                  {clip.maxDownloads ? (
+                    <span style={{ marginLeft: '0.5rem', color: 'var(--accent)', fontSize: '0.75rem' }}>
+                      (Downloads: {clip.downloadCount || 0}/{clip.maxDownloads})
+                    </span>
+                  ) : null}
+                </p>
               </div>
-              {clip.content && <a href={clip.content} download={clip.fileName} className="btn btn-ghost btn-sm">↓ Download</a>}
+              {clip.content && (
+                <a 
+                  href={clip.maxDownloads ? `/api/clips/${clip.id}/download` : clip.content} 
+                  target={clip.maxDownloads ? "_self" : "_blank"}
+                  rel="noopener noreferrer"
+                  className="btn btn-ghost btn-sm"
+                >
+                  ↓ Download
+                </a>
+              )}
             </div>
           ) : clip.type === 'link' ? (
             <p className="clip-content">

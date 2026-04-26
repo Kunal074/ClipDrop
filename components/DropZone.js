@@ -12,11 +12,15 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [maxDownloads, setMaxDownloads] = useState('');
   const fileInputRef = useRef(null);
 
   const uploadFile = useCallback(async (file) => {
-    if (file.size > MAX_SIZE && !isAdmin) {
-      setError('File too large. Maximum is 1 GB.');
+    const isVideo = file.type && file.type.startsWith('video/');
+    const MAX_ALLOWED = isVideo ? 3 * MAX_SIZE : MAX_SIZE;
+
+    if (file.size > MAX_ALLOWED && !isAdmin) {
+      setError(`File too large. Maximum is ${isVideo ? '3 GB for videos' : '1 GB per file'}.`);
       return;
     }
 
@@ -127,6 +131,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
         fileKey: finalFileKey,
         mimeType: file.type || 'application/octet-stream',
         isLargeFile: true,
+        maxDownloads: isVideo && maxDownloads ? parseInt(maxDownloads, 10) : undefined,
       });
     } catch (err) {
       setError(err.message);
@@ -134,7 +139,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
       setUploading(false);
       setTimeout(() => setProgress(0), 1500);
     }
-  }, [onUploadComplete, getToken]);
+  }, [onUploadComplete, getToken, isAdmin, maxDownloads]);
 
   useImperativeHandle(ref, () => ({
     uploadFile
@@ -169,6 +174,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
   };
 
   return (
+    <>
     <div
       className={`dropzone ${dragging ? 'dropzone--active' : ''} ${uploading ? 'dropzone--uploading' : ''}`}
       onDrop={handleDrop}
@@ -202,7 +208,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
             {dragging ? 'Drop to upload' : 'Drop a file or click to browse'}
           </p>
           <p className="dropzone__sublabel">
-            {isAdmin ? '♾️ Unlimited Size · Admin Mode' : 'Up to 1 GB · Max 10 files · Stored in Cloud'}
+            {isAdmin ? '♾️ Unlimited Size · Admin Mode' : 'Up to 1 GB (3GB for Videos) · Max 10 files'}
           </p>
         </>
       )}
@@ -223,6 +229,31 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
         </div>
       )}
     </div>
+    
+    <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-2)' }}>
+      <label htmlFor="maxDownloadsInput" style={{ marginRight: '0.5rem' }}>Auto-delete videos after (downloads):</label>
+      <input 
+        id="maxDownloadsInput" 
+        type="number"
+        min="1"
+        placeholder="e.g. 3"
+        value={maxDownloads} 
+        onChange={e => setMaxDownloads(e.target.value)}
+        style={{
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border)',
+          color: 'var(--text-1)',
+          padding: '4px 8px',
+          borderRadius: '6px',
+          outline: 'none',
+          width: '80px',
+        }}
+      />
+      <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.25rem', marginBottom: 0 }}>
+        Video will auto-delete in 1 hour.
+      </p>
+    </div>
+    </>
   );
 });
 

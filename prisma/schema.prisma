@@ -50,7 +50,9 @@ model Clip {
   mimeType    String    @default("")
   pinned      Boolean   @default(false)
   isPending   Boolean   @default(false)
-  isLargeFile Boolean   @default(false)
+  isLargeFile   Boolean   @default(false)
+  maxDownloads  Int?
+  downloadCount Int       @default(0)
   expiresAt   DateTime?
   editedAt    DateTime?
   createdAt   DateTime  @default(now())

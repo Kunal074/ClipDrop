@@ -88,7 +88,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 // POST /api/clips  → create a clip
 router.post('/', optionalAuth, async (req, res) => {
   try {
-    const { roomCode, type, content, comment, fileName, fileSize, fileKey, mimeType } = req.body;
+    const { roomCode, type, content, comment, fileName, fileSize, fileKey, mimeType, maxDownloads } = req.body;
 
     if (!roomCode || !type) {
       return res.status(400).json({ error: 'roomCode and type are required' });
@@ -106,7 +106,10 @@ router.post('/', optionalAuth, async (req, res) => {
     
     // Large files (temporary cloudinary workaround) expire in 5 minutes for normal users
     // Admins and small files get 30 minutes — pin to make Important (no expiry)
-    const expiresMinutes = (isLargeFile && !isOwner) ? 5 : 30;
+    let expiresMinutes = (isLargeFile && !isOwner) ? 5 : 30;
+    if (type === 'file' && mimeType.startsWith('video/')) {
+      expiresMinutes = 60; // 1 hour for all videos
+    }
     const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
 
     const clip = await prisma.clip.create({
@@ -122,6 +125,7 @@ router.post('/', optionalAuth, async (req, res) => {
         fileKey: fileKey || '',
         mimeType: mimeType || '',
         isLargeFile,
+        maxDownloads: maxDownloads ? parseInt(maxDownloads) : null,
         expiresAt,
       },
     });

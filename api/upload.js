@@ -53,12 +53,15 @@ router.post('/presign', requireAuth, async (req, res) => {
     const ADMIN_EMAILS = ['kunalsahu232777@gmail.com', 'clipdrop79@gmail.com'];
     const isAdmin = req.user?.email && ADMIN_EMAILS.includes(req.user.email.toLowerCase());
 
-    // Per-file size limit: 1GB (admins bypass this)
-    if (fileSize > MAX_FILE_SIZE && !isAdmin) {
-      return res.status(413).json({ error: 'File too large. Maximum size is 1 GB per file.' });
+    // Per-file size limit: 1GB normally, 3GB for videos (admins bypass this)
+    const isVideo = contentType.startsWith('video/');
+    const MAX_ALLOWED_SIZE = isVideo ? 3 * 1024 * 1024 * 1024 : MAX_FILE_SIZE;
+
+    if (fileSize > MAX_ALLOWED_SIZE && !isAdmin) {
+      return res.status(413).json({ error: `File too large. Maximum size is ${isVideo ? '3 GB for videos' : '1 GB per file'}.` });
     }
 
-    // Per-user limits: max 10 files AND max 2 GB total storage (admins bypass this)
+    // Per-user limits: max 10 files AND max 4 GB total storage (admins bypass this)
     if (!isAdmin) {
       const userFiles = await prisma.clip.findMany({
         where: {
@@ -71,7 +74,7 @@ router.post('/presign', requireAuth, async (req, res) => {
 
       const fileCount = userFiles.length;
       const totalUsed = userFiles.reduce((sum, f) => sum + (f.fileSize || 0), 0);
-      const TOTAL_LIMIT = 2 * 1024 * 1024 * 1024; // 2 GB total per user
+      const TOTAL_LIMIT = 4 * 1024 * 1024 * 1024; // 4 GB total per user
 
       if (fileCount >= 10) {
         return res.status(429).json({
@@ -86,7 +89,7 @@ router.post('/presign', requireAuth, async (req, res) => {
         const usedGB = (totalUsed / 1024 / 1024 / 1024).toFixed(2);
         return res.status(429).json({
           error: 'Storage limit reached',
-          message: `You have used ${usedGB} GB of your 2 GB storage limit. Please delete some files first.`,
+          message: `You have used ${usedGB} GB of your 4 GB storage limit. Please delete some files first.`,
         });
       }
     }
