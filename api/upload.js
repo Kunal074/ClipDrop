@@ -103,6 +103,9 @@ router.post('/presign', requireAuth, async (req, res) => {
     const accessToken = await getValidAccessToken(adminUser);
 
     const metadata = { name: fileName, mimeType: contentType };
+    if (process.env.GOOGLE_DRIVE_FOLDER_ID) {
+      metadata.parents = [process.env.GOOGLE_DRIVE_FOLDER_ID];
+    }
 
     const driveRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
       method: 'POST',
