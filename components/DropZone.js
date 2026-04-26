@@ -13,6 +13,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const [maxDownloads, setMaxDownloads] = useState('');
+  const [pendingVideo, setPendingVideo] = useState(null);
   const fileInputRef = useRef(null);
 
   const uploadFile = useCallback(async (file) => {
@@ -162,16 +163,90 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
     }
 
     const file = e.dataTransfer.files[0];
-    if (file) uploadFile(file);
+    if (file) {
+      if (file.type && file.type.startsWith('video/')) {
+        setPendingVideo(file);
+      } else {
+        uploadFile(file);
+      }
+    }
   }, [uploadFile]);
 
   const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
   const handleDragLeave = () => setDragging(false);
   const handleFileInput = (e) => {
     const file = e.target.files[0];
-    if (file) uploadFile(file);
+    if (file) {
+      if (file.type && file.type.startsWith('video/')) {
+        setPendingVideo(file);
+      } else {
+        uploadFile(file);
+      }
+    }
     e.target.value = '';
   };
+
+  if (pendingVideo) {
+    return (
+      <div className="dropzone" style={{ cursor: 'default', padding: '2rem 1rem' }}>
+        <div className="dropzone__icon">🎬</div>
+        <p className="dropzone__label" style={{ marginBottom: '1rem' }}>
+          Selected Video: <span style={{ color: 'var(--accent)' }}>{pendingVideo.name}</span>
+        </p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+          <label htmlFor="maxDownloadsInput" style={{ fontSize: '0.9rem', color: 'var(--text-2)' }}>
+            Enter allowed number of downloads (required):
+          </label>
+          <input 
+            id="maxDownloadsInput" 
+            type="number"
+            min="1"
+            placeholder="e.g. 3"
+            value={maxDownloads} 
+            onChange={e => setMaxDownloads(e.target.value)}
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-1)',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              outline: 'none',
+              width: '120px',
+              textAlign: 'center',
+              fontSize: '1rem'
+            }}
+            autoFocus
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--accent)', margin: 0 }}>
+            Video will also auto-expire in 1 hour.
+          </p>
+          
+          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+            <button 
+              className="btn btn-ghost"
+              onClick={() => {
+                setPendingVideo(null);
+                setMaxDownloads('');
+              }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-primary"
+              disabled={!maxDownloads || parseInt(maxDownloads) < 1}
+              onClick={() => {
+                uploadFile(pendingVideo);
+                setPendingVideo(null);
+              }}
+            >
+              Start Upload
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -228,30 +303,6 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
           ⚠️ {error}
         </div>
       )}
-    </div>
-    
-    <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-2)' }}>
-      <label htmlFor="maxDownloadsInput" style={{ marginRight: '0.5rem' }}>Auto-delete videos after (downloads):</label>
-      <input 
-        id="maxDownloadsInput" 
-        type="number"
-        min="1"
-        placeholder="e.g. 3"
-        value={maxDownloads} 
-        onChange={e => setMaxDownloads(e.target.value)}
-        style={{
-          background: 'var(--bg-card)',
-          border: '1px solid var(--border)',
-          color: 'var(--text-1)',
-          padding: '4px 8px',
-          borderRadius: '6px',
-          outline: 'none',
-          width: '80px',
-        }}
-      />
-      <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.25rem', marginBottom: 0 }}>
-        Video will auto-delete in 1 hour.
-      </p>
     </div>
     </>
   );

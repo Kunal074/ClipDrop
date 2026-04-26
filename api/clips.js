@@ -142,7 +142,7 @@ router.post('/', optionalAuth, async (req, res) => {
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, comment } = req.body;
+    const { content, comment, maxDownloads } = req.body;
 
     const clip = await prisma.clip.findUnique({ where: { id } });
     if (!clip) return res.status(404).json({ error: 'Clip not found' });
@@ -156,6 +156,9 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
     if (comment !== undefined) {
       updateData.comment = sanitize(comment);
+    }
+    if (maxDownloads !== undefined) {
+      updateData.maxDownloads = maxDownloads;
     }
 
     const updated = await prisma.clip.update({
@@ -314,6 +317,61 @@ router.patch('/:id/pin', requireAuth, async (req, res) => {
     return res.json({ clip: updated });
   } catch (err) {
     console.error('[clips PATCH pin]', err);
+    return res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// GET /api/clips/:id/download  → proxy download to track counts and delete
+router.get('/:id/download', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const clip = await prisma.clip.findUnique({ where: { id } });
+    
+    if (!clip || !clip.content) {
+      return res.status(404).json({ error: 'File not found or already deleted' });
+    }
+
+    if (clip.maxDownloads) {
+      if (clip.downloadCount >= clip.maxDownloads) {
+        return res.status(410).json({ error: 'Download limit reached. File has been deleted.' });
+      }
+
+      const newCount = clip.downloadCount + 1;
+      await prisma.clip.update({
+        where: { id },
+        data: { downloadCount: newCount }
+      });
+
+      if (newCount >= clip.maxDownloads) {
+        // Trigger asynchronous deletion
+        setImmediate(async () => {
+          try {
+            if (clip.fileKey) {
+              const { deleteDriveFile } = require('../lib/googleDrive');
+              const { deleteFromCloudinary } = require('../lib/cloudinary');
+              const { deleteFromR2 } = require('../lib/storage');
+
+              if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
+                await deleteFromCloudinary(clip.fileKey);
+              } else if (clip.isLargeFile || (!clip.fileKey.startsWith('clipdrop/') && !clip.fileKey.includes('r2.cloudflarestorage'))) {
+                await deleteDriveFile(clip.fileKey);
+              } else {
+                await deleteFromR2(clip.fileKey).catch(() => {});
+              }
+            }
+            await prisma.clip.delete({ where: { id } });
+            console.log(`[clips/download] Auto-deleted clip ${id} after ${newCount} downloads`);
+          } catch (e) {
+            console.error(`[clips/download] Auto-delete failed for ${id}:`, e.message);
+          }
+        });
+      }
+    }
+
+    // Redirect to the actual Google Drive / Cloudinary URL
+    return res.redirect(clip.content);
+  } catch (err) {
+    console.error('[clips/download]', err);
     return res.status(500).json({ error: 'Server error' });
   }
 });

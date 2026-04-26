@@ -106,6 +106,10 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   const isCode = clip.type === 'text' && looksLikeCode(clip.content);
   const isLongText = clip.type === 'text' && (clip.content?.length || 0) > 100;
 
+  // Edit limits state
+  const [isEditingLimit, setIsEditingLimit] = useState(false);
+  const [editLimitValue, setEditLimitValue] = useState(clip.maxDownloads || '');
+
   // Live countdown for ALL clips (null expiresAt = Important/pinned = never expires)
   const [timeLeft, setTimeLeft] = useState(() =>
     clip.expiresAt ? Math.max(0, Math.floor((new Date(clip.expiresAt) - Date.now()) / 1000)) : null
@@ -151,6 +155,13 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
     setLoading(true);
     await onEdit(clip.id, { content: editValue, comment: editComment });
     setEditing(false); setLoading(false);
+  };
+
+  const handleSaveLimit = async () => {
+    setLoading(true);
+    await onEdit(clip.id, { maxDownloads: parseInt(editLimitValue, 10) });
+    setIsEditingLimit(false); 
+    setLoading(false);
   };
 
   // ── OCR: extract text from image ──
@@ -388,12 +399,28 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
             <div className="clip-file">
               <span className="clip-file__icon">📦</span>
               <div className="clip-file__info">
-                <p className="clip-file__name">{clip.fileName}</p>
+                <p className="clip-file__name" style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}>{clip.fileName}</p>
                 <p className="clip-file__size">
                   {(clip.fileSize / 1024 / 1024).toFixed(2)} MB
-                  {clip.maxDownloads ? (
+                  {isEditingLimit ? (
+                    <span style={{ marginLeft: '0.5rem', display: 'inline-flex', gap: '0.25rem', alignItems: 'center' }}>
+                      <input 
+                        type="number" min="1" value={editLimitValue} onChange={e => setEditLimitValue(e.target.value)}
+                        style={{ width: '50px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-1)', borderRadius: '4px', padding: '2px 4px' }}
+                      />
+                      <button onClick={handleSaveLimit} className="btn btn-primary btn-sm" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>Save</button>
+                      <button onClick={() => setIsEditingLimit(false)} className="btn btn-ghost btn-sm" style={{ padding: '2px 6px', fontSize: '0.7rem' }}>Cancel</button>
+                    </span>
+                  ) : clip.maxDownloads ? (
                     <span style={{ marginLeft: '0.5rem', color: 'var(--accent)', fontSize: '0.75rem' }}>
                       (Downloads: {clip.downloadCount || 0}/{clip.maxDownloads})
+                      {isOwner && (
+                        <button 
+                          onClick={() => { setEditLimitValue(clip.maxDownloads); setIsEditingLimit(true); }}
+                          style={{ marginLeft: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7, fontSize: '0.75rem' }}
+                          title="Edit limit"
+                        >✏️</button>
+                      )}
                     </span>
                   ) : null}
                 </p>
