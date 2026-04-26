@@ -164,6 +164,28 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
     setLoading(false);
   };
 
+  const handleDownloadImage = async (e) => {
+    e.preventDefault();
+    if (!clip.content) return;
+    try {
+      const response = await fetch(clip.content);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = blobUrl;
+      a.download = clip.fileName || 'image.png';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(blobUrl);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Failed to download image:', err);
+      // Fallback
+      window.open(clip.content, '_blank');
+    }
+  };
+
   // ── OCR: extract text from image ──
   const handleOcr = async () => {
     if (!clip.content) return;
@@ -396,16 +418,13 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
                   className="btn btn-ghost btn-sm" style={{ display: 'none', marginTop: '0.5rem' }}
                   onClick={e => e.stopPropagation()}>🔗 View Image</a>
               </div>
-              <a 
-                href={clip.content} 
-                download={clip.fileName || 'image.png'} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <button 
+                onClick={handleDownloadImage}
                 className="btn btn-ghost btn-sm"
                 style={{ alignSelf: 'flex-start', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
               >
                 ↓ Download Image
-              </a>
+              </button>
             </div>
           ) : clip.type === 'file' ? (
             <div className="clip-file">
@@ -426,7 +445,7 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
                   ) : clip.maxDownloads ? (
                     <span style={{ marginLeft: '0.5rem', color: 'var(--accent)', fontSize: '0.75rem' }}>
                       (Downloads: {clip.downloadCount || 0}/{clip.maxDownloads})
-                      {isOwner && (
+                      {onEdit && (
                         <button 
                           onClick={() => { setEditLimitValue(clip.maxDownloads); setIsEditingLimit(true); }}
                           style={{ marginLeft: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7, fontSize: '0.75rem' }}
