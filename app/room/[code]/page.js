@@ -251,7 +251,7 @@ function RoomContent() {
             {onlineCount} online
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => {
-            if (socket) socket.emit('explicitLeave', roomCode);
+            if (socketRef.current) socketRef.current.emit('explicitLeave', roomCode);
             router.push('/');
           }} id="btn-leave-room">
             ← Leave
