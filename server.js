@@ -39,12 +39,8 @@ nextApp.prepare().then(() => {
 
   expressApp.use(cors({
     origin: function (origin, callback) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      if (!origin || origin === appUrl || origin.startsWith('chrome-extension://')) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
+      // Allow any origin so it works over local IP, Ngrok, or deployed URL
+      callback(null, origin || true);
     },
     credentials: true,
   }));
@@ -117,12 +113,8 @@ nextApp.prepare().then(() => {
   const io = new Server(httpServer, {
     cors: {
       origin: function (origin, callback) {
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        if (!origin || origin === appUrl || origin.startsWith('chrome-extension://')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
+        // Allow any origin so it works over local IP, Ngrok, or deployed URL
+        callback(null, origin || true);
       },
       methods: ['GET', 'POST'],
       credentials: true,
