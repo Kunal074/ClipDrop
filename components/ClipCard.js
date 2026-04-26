@@ -386,14 +386,26 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
               />
             </div>
           ) : clip.type === 'image' && clip.content ? (
-            <div className="clip-image-wrap" onClick={() => setLightbox(true)} style={{ cursor: 'zoom-in' }} title="Click to full view">
-              <img src={clip.content} alt={clip.fileName || 'Image'} className="clip-image"
-                style={{ width: '100%', borderRadius: 8, display: 'block' }}
-                onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-              />
-              <a href={clip.content} target="_blank" rel="noopener noreferrer"
-                className="btn btn-ghost btn-sm" style={{ display: 'none', marginTop: '0.5rem' }}
-                onClick={e => e.stopPropagation()}>🔗 View Image</a>
+            <div className="clip-image-container" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="clip-image-wrap" onClick={() => setLightbox(true)} style={{ cursor: 'zoom-in' }} title="Click to full view">
+                <img src={clip.content} alt={clip.fileName || 'Image'} className="clip-image"
+                  style={{ width: '100%', borderRadius: 8, display: 'block' }}
+                  onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+                <a href={clip.content} target="_blank" rel="noopener noreferrer"
+                  className="btn btn-ghost btn-sm" style={{ display: 'none', marginTop: '0.5rem' }}
+                  onClick={e => e.stopPropagation()}>🔗 View Image</a>
+              </div>
+              <a 
+                href={clip.content} 
+                download={clip.fileName || 'image.png'} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn btn-ghost btn-sm"
+                style={{ alignSelf: 'flex-start', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+              >
+                ↓ Download Image
+              </a>
             </div>
           ) : clip.type === 'file' ? (
             <div className="clip-file">

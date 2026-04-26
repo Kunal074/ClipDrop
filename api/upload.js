@@ -111,7 +111,7 @@ router.post('/presign', requireAuth, async (req, res) => {
         'Content-Type': 'application/json',
         'X-Upload-Content-Length': fileSize.toString(),
         'X-Upload-Content-Type': contentType,
-        'Origin': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+        'Origin': req.headers.origin || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       },
       body: JSON.stringify(metadata)
     });
