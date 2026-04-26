@@ -60,7 +60,7 @@ function HomeContent() {
             No account needed to join rooms — just paste, share, and it disappears.
           </p>
           <p style={{ fontSize: '0.95rem', color: 'var(--text-3)', marginTop: '-0.5rem' }}>
-            Plus 15+ free PDF &amp; image tools. Free Drive for 1GB file uploads.
+            Plus 15+ free PDF &amp; image tools. Free Drive for 1GB file and 3GB movies uploads.
           </p>
 
           <div className="hero-actions">
@@ -105,10 +105,10 @@ function HomeContent() {
         <section className="features" aria-label="Features">
           {[
             { icon: '⚡', title: 'Instant Sync', desc: 'Press Ctrl+V anywhere in a room. Text and images sync across devices in under 100ms via WebSocket.' },
-            { icon: '📦', title: 'Unlimited File Size', desc: 'Drop massive files. Uploaded directly to your personal Google Drive — never touches our server, zero limits.' },
+            { icon: '📦', title: 'Unlimited File Uploads', desc: 'Drop movies and files. Uploaded directly to your personal Personal Workspace — never touches our server, zero limits.' },
             { icon: '🛠️', title: 'PDF & Image Tools', desc: 'Merge, split, compress, or convert documents to PDF instantly right in your browser for free.' },
             { icon: '🔗', title: 'Drop Rooms', desc: 'Share a 6-character code. Any device that joins sees every clip in real-time instantly.' },
-            { icon: '💾', title: 'Persistent Dashboard', desc: 'All your clips saved to your account. Edit text, pin favourites, delete what you don\'t need.' },
+            { icon: '💾', title: 'Persistent Workspace', desc: 'All your clips saved to your account. Edit text, pin favourites, delete what you don\'t need.' },
             { icon: '🎨', title: 'Vector & Raster Edits', desc: 'Convert SVGs to PNGs, resize images, or even turn raster images into vector SVG files.' },
             { icon: '🌍', title: 'Browser Native', desc: '100% web-based. Works on any device with a modern browser — phone, tablet, or desktop.' },
           ].map(f => (

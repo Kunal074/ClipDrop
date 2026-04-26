@@ -21,7 +21,7 @@ export default function FeaturesPage() {
           </div>
           <div>
             <h3>✦ 1GB File Uploads</h3>
-            <p style={{ color: 'var(--text-2)' }}>Upload massive files directly to your Google Drive—completely bypassing storage limits.</p>
+            <p style={{ color: 'var(--text-2)' }}>Upload movies and files directly to your Personal Workspace—completely bypassing storage limits.</p>
           </div>
           <div>
             <h3>✦ Built-in Tools</h3>
