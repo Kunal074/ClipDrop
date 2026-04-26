@@ -45,6 +45,13 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
         console.error('[DropZone] Presign failed:', presignRes.status, rawText);
         let err;
         try { err = JSON.parse(rawText); } catch { err = { error: rawText }; }
+
+        if (presignRes.status === 429) {
+          throw new Error(err.message || 'File limit reached. Please delete a file first.');
+        }
+        if (presignRes.status === 413) {
+          throw new Error('File too large. Maximum is 1 GB per file.');
+        }
         throw new Error(`[${presignRes.status}] ${err.error || rawText}`);
       }
 
@@ -195,7 +202,7 @@ const DropZone = forwardRef(({ onUploadComplete, roomCode, getToken }, ref) => {
             {dragging ? 'Drop to upload' : 'Drop a file or click to browse'}
           </p>
           <p className="dropzone__sublabel">
-            {isAdmin ? '♾️ Unlimited Size · Admin Mode' : 'Up to 1 GB · Securely Stored in Cloud'}
+            {isAdmin ? '♾️ Unlimited Size · Admin Mode' : 'Up to 1 GB · Max 10 files · Stored in Cloud'}
           </p>
         </>
       )}

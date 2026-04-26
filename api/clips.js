@@ -188,9 +188,9 @@ router.delete('/:id', requireAuth, async (req, res) => {
       if (clip.type === 'image' && clip.fileKey.startsWith('clipdrop/')) {
         // Pasted image stored in Cloudinary
         await deleteFromCloudinary(clip.fileKey);
-      } else if (clip.userId) {
+      } else if (clip.userId && !clip.fileKey.startsWith('clipdrop/')) {
         // Large file on Google Drive
-        await deleteDriveFile(clip.userId, clip.fileKey);
+        await deleteDriveFile(clip.fileKey);
       } else {
         // Legacy R2 file
         await deleteFromR2(clip.fileKey).catch((e) =>

@@ -256,7 +256,11 @@ router.get('/google/connect', requireAuth, (req, res) => {
   const oauth2Client = getGoogleOAuthClient();
   const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/userinfo.profile'],
+    scope: [
+      'https://www.googleapis.com/auth/drive',          // full Drive access (create, read, delete)
+      'https://www.googleapis.com/auth/userinfo.email',  // to verify correct account
+      'https://www.googleapis.com/auth/userinfo.profile',
+    ],
     prompt: 'consent',
     state: req.user.id,
   });

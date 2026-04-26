@@ -53,8 +53,42 @@ router.post('/presign', requireAuth, async (req, res) => {
     const ADMIN_EMAILS = ['kunalsahu232777@gmail.com', 'clipdrop79@gmail.com'];
     const isAdmin = req.user?.email && ADMIN_EMAILS.includes(req.user.email.toLowerCase());
 
+    // Per-file size limit: 1GB (admins bypass this)
     if (fileSize > MAX_FILE_SIZE && !isAdmin) {
-      return res.status(413).json({ error: 'File too large. Maximum size is 1 GB.' });
+      return res.status(413).json({ error: 'File too large. Maximum size is 1 GB per file.' });
+    }
+
+    // Per-user limits: max 10 files AND max 2 GB total storage (admins bypass this)
+    if (!isAdmin) {
+      const userFiles = await prisma.clip.findMany({
+        where: {
+          userId: req.user.id,
+          isLargeFile: true,
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+        select: { fileSize: true },
+      });
+
+      const fileCount = userFiles.length;
+      const totalUsed = userFiles.reduce((sum, f) => sum + (f.fileSize || 0), 0);
+      const TOTAL_LIMIT = 2 * 1024 * 1024 * 1024; // 2 GB total per user
+
+      if (fileCount >= 10) {
+        return res.status(429).json({
+          error: 'File limit reached',
+          message: 'You can only keep 10 files at a time. Please delete one before uploading more.',
+          count: fileCount,
+          limit: 10,
+        });
+      }
+
+      if (totalUsed + fileSize > TOTAL_LIMIT) {
+        const usedGB = (totalUsed / 1024 / 1024 / 1024).toFixed(2);
+        return res.status(429).json({
+          error: 'Storage limit reached',
+          message: `You have used ${usedGB} GB of your 2 GB storage limit. Please delete some files first.`,
+        });
+      }
     }
 
     // Fetch the Master Admin user to use their Google Drive storage

@@ -231,11 +231,17 @@ nextApp.prepare().then(() => {
             catch (e) { console.warn(`[cron] Cloudinary delete failed for ${clip.fileKey}:`, e.message); }
           } else if (adminAccessToken) {
             try {
-              await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
+              const delRes = await fetch(`https://www.googleapis.com/drive/v3/files/${clip.fileKey}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${adminAccessToken}` }
               });
-            } catch (driveErr) { console.error(`[cron] Drive delete failed for ${clip.fileKey}:`, driveErr.message); }
+              if (delRes.status === 204) {
+                console.log(`[cron] ✅ Drive deleted: ${clip.fileKey}`);
+              } else {
+                const errText = await delRes.text();
+                console.error(`[cron] ❌ Drive delete failed [${delRes.status}] for ${clip.fileKey}:`, errText);
+              }
+            } catch (driveErr) { console.error(`[cron] Drive delete exception for ${clip.fileKey}:`, driveErr.message); }
           }
         }
         await prisma.clip.delete({ where: { id: clip.id } });
