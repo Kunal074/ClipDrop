@@ -24,6 +24,8 @@ function RoomContent() {
   const [fileComment, setFileComment] = useState('');
   const [sending, setSending] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const qrRef = useRef(null);
 
   const socketRef = useRef(null);
   const typingTimer = useRef(null);
@@ -44,6 +46,40 @@ function RoomContent() {
       .catch(() => setNotFound(true))
       .finally(() => setFetching(false));
   }, [roomCode]);
+
+  // ─── Render Custom QR Code (lazy, only when shown) ──────────
+  const qrRendered = useRef(false);
+  useEffect(() => {
+    if (!showQR || !qrRef.current || qrRendered.current) return;
+    qrRendered.current = true;
+    import('qr-code-styling').then((QRCodeStylingModule) => {
+      const QRCodeStyling = QRCodeStylingModule.default;
+      const qrCode = new QRCodeStyling({
+        width: 200,
+        height: 200,
+        type: 'svg',
+        data: window.location.href,
+        image: '/qr-bg.jpg',
+        dotsOptions: {
+          type: 'extra-rounded',
+          gradient: {
+            type: 'linear',
+            rotation: Math.PI / 2,
+            colorStops: [
+              { offset: 0, color: '#0052D4' },
+              { offset: 1, color: '#4364F7' },
+            ],
+          },
+        },
+        cornersSquareOptions: { type: 'extra-rounded', color: '#000000' },
+        cornersDotOptions: { type: 'dot', color: '#000000' },
+        backgroundOptions: { color: '#ffffff' },
+        imageOptions: { crossOrigin: 'anonymous', margin: 4, imageSize: 0.4 },
+      });
+      qrRef.current.innerHTML = '';
+      qrCode.append(qrRef.current);
+    });
+  }, [showQR]);
 
   // ─── Socket.io ─────────────────────────────
   useEffect(() => {
@@ -237,12 +273,56 @@ function RoomContent() {
 
       {/* Room Header */}
       <div className="room-header">
-        <div className="room-code-display">
-          <button onClick={copyRoomCode} style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-            title="Click to copy room code" id="btn-copy-room-code">
+        {/* Room Code + QR button */}
+        <div style={{ position: 'relative' }}>
+          <button
+            onClick={copyRoomCode}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}
+            title="Click to copy room code"
+            id="btn-copy-room-code"
+          >
             <div className="room-code-label">Drop Room</div>
             <div className="room-code-value">{roomCode}</div>
           </button>
+
+          <button
+            onClick={() => setShowQR(v => !v)}
+            className="btn btn-ghost btn-sm"
+            style={{ marginTop: '4px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            📱 QR Code
+          </button>
+
+          {showQR && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 10px)',
+              left: 0,
+              zIndex: 100,
+              background: '#1a1b26',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '16px',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              minWidth: '232px',
+            }}>
+              <div style={{ background: '#fff', borderRadius: '10px', padding: '8px', lineHeight: 0 }}>
+                <div ref={qrRef} />
+              </div>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-2)', letterSpacing: '1px' }}>
+                Scan to join · {roomCode}
+              </p>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ fontSize: '0.75rem', padding: '4px 12px' }}
+                onClick={() => setShowQR(false)}
+              >✕ Close</button>
+            </div>
+          )}
         </div>
 
         <div className="room-status">
@@ -258,6 +338,8 @@ function RoomContent() {
           </button>
         </div>
       </div>
+
+
 
       {/* Body */}
       <div className="room-body">

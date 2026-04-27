@@ -159,14 +159,15 @@ function LoginContent() {
 
   return (
     <div className="auth-page">
+      {/* Page-level gradient heading */}
+      <h1 className="auth-heading">
+        Don't lose your clips!<br />
+        <span>Log in to save them to your Personal Workspace.</span>
+      </h1>
+
       <div className="auth-wrap">
         <div className="auth-form-side">
           <div className="auth-card">
-            <div className="auth-logo">
-              <span>📋</span>
-              <span>ClipDrop</span>
-            </div>
-
             {step === 'device-otp' ? (
               <>
                 <DeviceOtpStep email={pendingEmail} onSuccess={() => router.push('/dashboard')} />
@@ -178,7 +179,7 @@ function LoginContent() {
               </>
             ) : (
               <>
-                <h1 className="auth-title">Welcome back</h1>
+                <h2 className="auth-title">Welcome back</h2>
                 <p className="auth-subtitle">Sign in to your account</p>
 
                 <form className="auth-form" onSubmit={handleSubmit} id="form-login" noValidate>

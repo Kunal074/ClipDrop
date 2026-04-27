@@ -30,17 +30,18 @@ router.post('/', optionalAuth, async (req, res) => {
     let ownerId = req.user?.id;
     if (!ownerId) {
       // Find or create the guest system user
+      // Find or create the guest system user
       const guestEmail = 'guest_system@clipdrop.local';
       let guestUser = await prisma.user.findUnique({ where: { email: guestEmail } });
       if (!guestUser) {
-        // Create the guest system user with dummy credentials
         const bcrypt = require('bcryptjs');
-        const hashedPassword = await bcrypt.hash(Math.random().toString(), 10);
+        const hashedPassword = await bcrypt.hash(Math.random().toString(36), 10);
         guestUser = await prisma.user.create({
           data: {
             email: guestEmail,
             username: 'guest_system',
             password: hashedPassword,
+            isVerified: true,
           }
         });
       }

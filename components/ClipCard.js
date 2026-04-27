@@ -275,6 +275,9 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
       setShareLoading(false);
     }
   };
+  if (timeLeft === 0 && !clip.pinned) {
+    return null;
+  }
 
   return (
     <>

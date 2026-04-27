@@ -284,17 +284,18 @@ function RegisterContent() {
 
   return (
     <div className="auth-page">
+      {/* Page-level gradient heading */}
+      <h1 className="auth-heading">
+        Don't lose your clips!<br />
+        <span>Sign up to save them to your Personal Workspace.</span>
+      </h1>
+
       <div className="auth-wrap">
         <div className="auth-form-side">
           <div className="auth-card">
-            <div className="auth-logo">
-              <span>📋</span>
-              <span>ClipDrop</span>
-            </div>
-
             {step === 'form' ? (
               <>
-                <h1 className="auth-title">Create account</h1>
+                <h2 className="auth-title">Create account</h2>
                 <p className="auth-subtitle">Start dropping clips across your devices</p>
                 <RegisterForm onOtpRequired={handleOtpRequired} />
                 <p className="auth-footer">
