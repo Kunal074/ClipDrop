@@ -266,6 +266,11 @@ router.post('/:id/share', requireAuth, async (req, res) => {
       },
     });
 
+    const io = req.app.get('io');
+    if (io) {
+      io.to(targetRoomCode).emit('clip-received', sharedClip);
+    }
+
     return res.json({ success: true, sharedClip });
   } catch (err) {
     console.error('[clips SHARE]', err);

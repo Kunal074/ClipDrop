@@ -88,6 +88,7 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const [lightbox, setLightbox] = useState(false);
+  const isSaving = useRef(false);
 
   // Sharing state
   const [isSharing, setIsSharing] = useState(false);
@@ -152,9 +153,18 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
       setEditComment(clip.comment || '');
       return; 
     }
+    if (isSaving.current) return;
+    isSaving.current = true;
     setLoading(true);
     await onEdit(clip.id, { content: editValue, comment: editComment });
     setEditing(false); setLoading(false);
+    isSaving.current = false;
+  };
+
+  const handleEditorBlur = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      handleEdit();
+    }
   };
 
   const handleSaveLimit = async () => {
@@ -332,7 +342,7 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
             >
               📤
             </button>
-            {onPin && (
+            {onPin && clip.type !== 'file' && (
               <button
                 onClick={() => onPin(clip.id)}
                 className="icon-btn"
@@ -392,7 +402,10 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
         {/* Content */}
         <div className="clip-card__body">
           {editing ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div 
+              style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
+              onBlur={handleEditorBlur}
+            >
               {['text', 'link'].includes(clip.type) && (
                 <textarea className="clip-edit-input" value={editValue}
                   onChange={e => setEditValue(e.target.value)} rows={4} autoFocus placeholder="Edit content..." />
@@ -448,9 +461,9 @@ export default function ClipCard({ clip, onDelete, onEdit, onPin, onNewClip, sho
                       {onEdit && (
                         <button 
                           onClick={() => { setEditLimitValue(clip.maxDownloads); setIsEditingLimit(true); }}
-                          style={{ marginLeft: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.7, fontSize: '0.75rem' }}
+                          style={{ marginLeft: '0.25rem', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-1)', opacity: 0.7, fontSize: '0.75rem' }}
                           title="Edit limit"
-                        >✏️</button>
+                        >Edit</button>
                       )}
                     </span>
                   ) : null}
